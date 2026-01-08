@@ -26,6 +26,13 @@ jobs:
           # Pull latest changes
           git pull origin main || git pull origin master
           
+          # Copy frontend files to web root
+          cp -r frontend/* /var/www/html/
+          
+          # Ensure assets directory exists and copy assets
+          mkdir -p /var/www/html/assets
+          cp -r frontend/assets/* /var/www/html/assets/
+          
           # Install/update Python dependencies
           pip3 install -r backend/requirements.txt
           
