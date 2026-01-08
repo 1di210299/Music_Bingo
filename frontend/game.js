@@ -111,7 +111,7 @@ function loadVenueNameFromStorage() {
 /**
  * Save venue name to localStorage
  */
-async function saveVenueName() {
+async function saveVenueName(event) {
     const input = document.getElementById('venueName');
     const venueName = input.value.trim();
     
@@ -129,16 +129,21 @@ async function saveVenueName() {
     // Reload announcements with new venue name
     await loadAnnouncements();
     
-    // Show confirmation
-    const button = event.target;
-    const originalText = button.textContent;
-    button.textContent = '✅ Saved!';
-    button.style.background = 'linear-gradient(135deg, #38ef7d 0%, #11998e 100%)';
+    // Update announcements list
+    updateAnnouncementsList();
     
-    setTimeout(() => {
-        button.textContent = originalText;
-        button.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
-    }, 2000);
+    // Show confirmation
+    if (event && event.target) {
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '✅ Saved!';
+        button.style.background = 'linear-gradient(135deg, #38ef7d 0%, #11998e 100%)';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+        }, 2000);
+    }
     
     console.log(`✓ Venue name saved: ${venueName}`);
 }
@@ -220,6 +225,9 @@ async function loadAnnouncements() {
                 ]
             };
         }
+        
+        // Update the announcements list display
+        updateAnnouncementsList();
     } catch (error) {
         console.warn('Could not load announcements:', error);
     }
@@ -883,6 +891,84 @@ function updateCalledList() {
 function updateStats() {
     document.getElementById('calledCount').textContent = gameState.called.length;
     document.getElementById('remainingCount').textContent = gameState.remaining.length;
+}
+
+/**
+ * Update announcements list display
+ */
+function updateAnnouncementsList() {
+    const container = document.getElementById('announcementsList');
+    if (!container) return;
+    
+    if (!gameState.announcementsData || !gameState.announcementsData.custom_announcements) {
+        container.innerHTML = '<p style="opacity: 0.6;">No announcements loaded</p>';
+        return;
+    }
+    
+    const announcements = gameState.announcementsData.custom_announcements;
+    
+    let html = '<div style="display: grid; gap: 8px;">';
+    announcements.forEach((ann, i) => {
+        html += `
+            <button 
+                onclick="playSpecificAnnouncement(${i})" 
+                style="
+                    padding: 12px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none;
+                    border-radius: 8px;
+                    color: white;
+                    cursor: pointer;
+                    text-align: left;
+                    font-size: 0.9em;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                "
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+            >
+                ${i + 1}. ${ann}
+            </button>
+        `;
+    });
+    html += '</div>';
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Play specific announcement by index
+ */
+async function playSpecificAnnouncement(index) {
+    if (!gameState.announcementsData || !gameState.announcementsData.custom_announcements) {
+        alert('No announcements available');
+        return;
+    }
+    
+    const text = gameState.announcementsData.custom_announcements[index];
+    
+    updateStatus('📢 Playing announcement...', true);
+    
+    try {
+        const audioUrl = await generateElevenLabsTTS(text);
+        
+        await new Promise((resolve, reject) => {
+            const announcementPlayer = new Howl({
+                src: [audioUrl],
+                html5: true,
+                volume: CONFIG.TTS_VOLUME,
+                onend: resolve,
+                onloaderror: reject,
+                onplayerror: reject
+            });
+            
+            announcementPlayer.play();
+        });
+        
+        updateStatus('✅ Announcement complete', false);
+    } catch (error) {
+        console.error('Error playing announcement:', error);
+        updateStatus('❌ Announcement failed', false);
+    }
 }
 
 /**
