@@ -510,7 +510,15 @@ function generateAnnouncementText(track) {
         const types = ['decade', 'trivia', 'simple'];
         const randomType = types[Math.floor(Math.random() * types.length)];
         
+        console.log(`✓ Using AI announcement (${randomType}) for track ${track.id}`);
         return aiAnnouncements[randomType];
+    }
+    
+    // Debug: Log why AI announcement wasn't found
+    console.warn(`⚠️ No AI announcement for track ${track.id} (type: ${typeof track.id})`);
+    if (gameState.announcementsAI) {
+        const keys = Object.keys(gameState.announcementsAI);
+        console.log(`Available AI keys sample:`, keys.slice(0, 5));
     }
     
     // Fallback to template system if AI not available
