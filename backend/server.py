@@ -182,7 +182,7 @@ def generate_cards_api():
         # Run the generator script with venue name and player info
         # Note: generate_cards.py doesn't use optimal_songs yet, but we log it
         result = subprocess.run(
-            ['python', script_path, venue_name],
+            ['python3', script_path, venue_name],
             cwd=BASE_DIR,
             capture_output=True,
             text=True,
