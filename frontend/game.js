@@ -22,7 +22,7 @@ const CONFIG = {
     API_URL: window.location.origin,  // Same origin as frontend
     
     // Game settings
-    PREVIEW_DURATION_MS: 18000,  // 18 seconds of song preview (Philip's feedback: extended from 8s)
+    PREVIEW_DURATION_MS: 12000,  // 12 seconds of song preview (Philip's feedback: adjusted from 18s)
     AUTO_NEXT_DELAY_MS: 15000,  // 15 seconds between songs (optional auto-mode)
     
     // Audio settings
