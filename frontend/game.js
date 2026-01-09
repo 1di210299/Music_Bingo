@@ -232,6 +232,30 @@ function loadVenueNameFromStorage() {
 }
 
 /**
+ * Reset setup - shows the setup modal again and clears game state
+ */
+function resetSetup() {
+    const confirmReset = confirm('⚠️ This will restart the game and clear all progress. Continue?');
+    
+    if (!confirmReset) return;
+    
+    // Clear setup flag
+    localStorage.removeItem('setupCompleted');
+    
+    // Show modal
+    const modal = document.getElementById('setupModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        initializeSetupModal();
+    }
+    
+    // Optionally reload page for clean slate
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+/**
  * Save venue name to localStorage
  */
 async function saveVenueName(event) {
