@@ -1205,6 +1205,50 @@ async function playCustomAnnouncement() {
 }
 
 /**
+ * Reset setup and show configuration modal
+ */
+function resetSetup() {
+    if (!confirm('Reconfigure setup? This will clear all game progress and show the setup modal again.')) {
+        return;
+    }
+    
+    // Stop any playing audio
+    if (musicPlayer) {
+        musicPlayer.stop();
+        musicPlayer = null;
+    }
+    if (ttsPlayer) {
+        ttsPlayer.stop();
+        ttsPlayer = null;
+    }
+    if (backgroundMusic) {
+        backgroundMusic.stop();
+        backgroundMusic = null;
+    }
+    
+    // Clear all saved data
+    localStorage.removeItem('setupCompleted');
+    localStorage.removeItem('venueName');
+    localStorage.removeItem('numPlayers');
+    localStorage.removeItem('voiceId');
+    localStorage.removeItem('selectedDecades');
+    clearGameState();
+    
+    // Reset game state
+    gameState.remaining = [];
+    gameState.called = [];
+    gameState.currentTrack = null;
+    gameState.isPlaying = false;
+    gameState.welcomeAnnounced = false;
+    gameState.halfwayAnnounced = false;
+    gameInitialized = false;
+    
+    // Show setup modal and reload page
+    console.log('🔄 Resetting setup...');
+    location.reload();
+}
+
+/**
  * Reset game to start over
  */
 function resetGame() {
@@ -1600,8 +1644,13 @@ async function generateCards() {
         // Show success message with game info
         alert(`✅ Cards generated successfully!\n\nVenue: ${venueName}\nPlayers: ${numPlayers}\nOptimal songs: ${optimalSongs}\nEstimated duration: ${estimatedMinutes} minutes\n\nCards: ${result.num_cards}\nPages: ${result.num_pages}\n\nDownloading now...`);
         
-        // Download the PDF
-        window.open(`${CONFIG.API_URL}/data/cards/music_bingo_cards.pdf`, '_blank');
+        // Download the PDF automatically
+        const link = document.createElement('a');
+        link.href = `${CONFIG.API_URL}/data/cards/music_bingo_cards.pdf`;
+        link.download = `music_bingo_${venueName.replace(/\s+/g, '_')}_${numPlayers}players.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
     } catch (error) {
         console.error('Error generating cards:', error);
