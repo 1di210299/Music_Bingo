@@ -1105,7 +1105,7 @@ async function playSongPreview(track) {
  */
 async function playCustomAnnouncement() {
     if (!gameState.announcementsData || gameState.announcementsData.custom_announcements.length === 0) {
-        alert('No custom announcements configured.');
+        console.log('ℹ️ No custom announcements configured.');
         return;
     }
     
