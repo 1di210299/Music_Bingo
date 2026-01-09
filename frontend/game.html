@@ -41,15 +41,57 @@
                     <small>How many people will play? (affects song selection)</small>
                 </div>
                 
-                <div class="setup-field">
-                    <label for="setupVoice">🎙️ DJ Voice (British) *</label>
-                    <select id="setupVoice" required>
-                        <option value="XrExE9yKIg1WjnnlVkGX">Charlotte - Female (Warm, Professional)</option>
-                        <option value="JBFqnCBsd6RMkjVDRZzb" selected>George - Male (Deep, Authoritative)</option>
-                        <option value="pFZP5JQG7iQjIQuC4Bku">Lily - Female (Young, Energetic)</option>
-                        <option value="nPczCjzI2devNBz1zQrb">Brian - Male (News Presenter)</option>
-                    </select>
-                    <small>Choose the voice for announcements</small>
+                <div class="setup-field voice-selector">
+                    <label>🎤️ DJ Voice (British) *</label>
+                    <small>Choose your announcer voice and preview it</small>
+                    
+                    <div class="voice-cards">
+                        <div class="voice-card" data-voice-id="XrExE9yKIg1WjnnlVkGX" data-voice-name="Charlotte">
+                            <div class="voice-icon female">♀️</div>
+                            <div class="voice-info">
+                                <strong>Charlotte</strong>
+                                <span>Warm & Professional</span>
+                            </div>
+                            <button type="button" class="preview-btn" onclick="previewVoice('XrExE9yKIg1WjnnlVkGX', 'Charlotte')">
+                                🔊 Preview
+                            </button>
+                        </div>
+                        
+                        <div class="voice-card selected" data-voice-id="JBFqnCBsd6RMkjVDRZzb" data-voice-name="George">
+                            <div class="voice-icon male">♂️</div>
+                            <div class="voice-info">
+                                <strong>George</strong>
+                                <span>Deep & Authoritative</span>
+                            </div>
+                            <button type="button" class="preview-btn" onclick="previewVoice('JBFqnCBsd6RMkjVDRZzb', 'George')">
+                                🔊 Preview
+                            </button>
+                        </div>
+                        
+                        <div class="voice-card" data-voice-id="pFZP5JQG7iQjIQuC4Bku" data-voice-name="Lily">
+                            <div class="voice-icon female">♀️</div>
+                            <div class="voice-info">
+                                <strong>Lily</strong>
+                                <span>Young & Energetic</span>
+                            </div>
+                            <button type="button" class="preview-btn" onclick="previewVoice('pFZP5JQG7iQjIQuC4Bku', 'Lily')">
+                                🔊 Preview
+                            </button>
+                        </div>
+                        
+                        <div class="voice-card" data-voice-id="nPczCjzI2devNBz1zQrb" data-voice-name="Brian">
+                            <div class="voice-icon male">♂️</div>
+                            <div class="voice-info">
+                                <strong>Brian</strong>
+                                <span>News Presenter</span>
+                            </div>
+                            <button type="button" class="preview-btn" onclick="previewVoice('nPczCjzI2devNBz1zQrb', 'Brian')">
+                                🔊 Preview
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="setupVoice" value="JBFqnCBsd6RMkjVDRZzb" required>
                 </div>
                 
                 <div class="setup-estimation" id="setupEstimation">

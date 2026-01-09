@@ -116,6 +116,9 @@ function initializeSetupModal() {
     setupNumPlayers.addEventListener('input', updateSetupEstimation);
     updateSetupEstimation();
     
+    // Setup voice card selection
+    setupVoiceCardSelection();
+    
     // Allow Enter key to submit
     setupVenueName.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') completeSetup();
@@ -123,6 +126,116 @@ function initializeSetupModal() {
     setupNumPlayers.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') completeSetup();
     });
+}
+
+/**
+ * Setup voice card selection functionality
+ */
+function setupVoiceCardSelection() {
+    const voiceCards = document.querySelectorAll('.voice-card');
+    const hiddenInput = document.getElementById('setupVoice');
+    
+    // Restore saved voice selection
+    const savedVoice = localStorage.getItem('voiceId');
+    if (savedVoice) {
+        voiceCards.forEach(card => {
+            if (card.dataset.voiceId === savedVoice) {
+                card.classList.add('selected');
+                hiddenInput.value = savedVoice;
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Add click handlers
+    voiceCards.forEach(card => {
+        card.addEventListener('click', (e) => {
+            // Don't trigger if clicking the preview button
+            if (e.target.classList.contains('preview-btn')) return;
+            
+            // Deselect all cards
+            voiceCards.forEach(c => c.classList.remove('selected'));
+            
+            // Select clicked card
+            card.classList.add('selected');
+            
+            // Update hidden input
+            hiddenInput.value = card.dataset.voiceId;
+            
+            console.log(`✓ Voice selected: ${card.dataset.voiceName} (${card.dataset.voiceId})`);
+        });
+    });
+}
+
+/**
+ * Preview a voice by generating sample TTS
+ */
+let currentPreviewAudio = null;
+
+async function previewVoice(voiceId, voiceName) {
+    const btn = event.target;
+    
+    // Stop any currently playing preview
+    if (currentPreviewAudio) {
+        currentPreviewAudio.pause();
+        currentPreviewAudio = null;
+    }
+    
+    // Disable button
+    btn.disabled = true;
+    btn.textContent = '⏳ Loading...';
+    
+    try {
+        // Sample text for preview
+        const sampleText = `Hello! I'm ${voiceName}, your Music Bingo DJ. Get ready for an amazing night of music and fun!`;
+        
+        // Generate TTS
+        const response = await fetch(`${CONFIG.API_URL}/api/tts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                text: sampleText,
+                voice_id: voiceId
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to generate voice preview');
+        }
+        
+        const audioBlob = await response.blob();
+        const blobUrl = URL.createObjectURL(audioBlob);
+        
+        // Play preview
+        currentPreviewAudio = new Audio(blobUrl);
+        currentPreviewAudio.volume = 0.8;
+        
+        currentPreviewAudio.onended = () => {
+            btn.disabled = false;
+            btn.textContent = '🔊 Preview';
+            URL.revokeObjectURL(blobUrl);
+        };
+        
+        currentPreviewAudio.onerror = () => {
+            btn.disabled = false;
+            btn.textContent = '🔊 Preview';
+            alert('Failed to play audio preview');
+        };
+        
+        await currentPreviewAudio.play();
+        btn.textContent = '▶️ Playing...';
+        
+        console.log(`✓ Playing voice preview: ${voiceName}`);
+        
+    } catch (error) {
+        console.error('Voice preview error:', error);
+        alert(`Failed to preview voice: ${error.message}`);
+        btn.disabled = false;
+        btn.textContent = '🔊 Preview';
+    }
 }
 
 /**
