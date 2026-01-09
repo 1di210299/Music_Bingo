@@ -362,7 +362,7 @@ button:disabled {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 20px;
     padding: 0;
-    max-width: 700px;  /* Increased from 500px */
+    max-width: 850px;  /* Increased from 700px for better space usage */
     width: 90%;
     max-height: 90vh;  /* Limit height */
     overflow-y: auto;  /* Enable scroll if needed */
@@ -452,6 +452,71 @@ button:disabled {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     font-weight: 600;
+}
+
+/* Decades checkbox grid */
+.decades-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.decade-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.decade-checkbox:hover {
+    border-color: #667eea;
+    background: #f0f2ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.decade-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.decade-checkbox input[type="checkbox"]:checked + .decade-label {
+    color: white;
+}
+
+.decade-checkbox:has(input:checked) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.decade-label {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #2c3e50;
+    line-height: 1.3;
+}
+
+.decade-label small {
+    display: block;
+    font-size: 0.8em;
+    font-weight: normal;
+    margin-top: 3px;
+    opacity: 0.8;
+}
+
+.decade-checkbox:has(input:checked) .decade-label {
+    color: white;
+}
+
+.decade-checkbox:has(input:checked) .decade-label small {
+    opacity: 0.9;
 }
 
 .setup-field input:focus,
@@ -651,10 +716,14 @@ button:disabled {
 /* Tablet responsive (between mobile and desktop) */
 @media (min-width: 769px) and (max-width: 1024px) {
     .modal-content {
-        max-width: 650px;
+        max-width: 750px;
     }
     
     .voice-cards {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .decades-grid {
         grid-template-columns: repeat(4, 1fr);
     }
 }
@@ -696,6 +765,15 @@ button:disabled {
     .modal-content {
         max-width: 95%;
         max-height: 95vh;
+    }
+    
+    .decades-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .decade-checkbox {
+        padding: 10px 6px;
     }
 }
 

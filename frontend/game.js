@@ -106,13 +106,12 @@ function initializeSetupModal() {
     if (savedPlayers) setupNumPlayers.value = savedPlayers;
     if (savedVoice) document.getElementById('setupVoice').value = savedVoice;
     
-    // Restore decade selections
+    // Restore decade checkbox selections
     if (savedDecades) {
         try {
             const decades = JSON.parse(savedDecades);
-            const setupDecades = document.getElementById('setupDecades');
-            Array.from(setupDecades.options).forEach(option => {
-                option.selected = decades.includes(option.value);
+            document.querySelectorAll('input[name="decades"]').forEach(checkbox => {
+                checkbox.checked = decades.includes(checkbox.value);
             });
         } catch (e) {
             console.warn('Could not restore decade selection:', e);
@@ -288,13 +287,14 @@ async function completeSetup() {
         const setupVoice = document.getElementById('setupVoice');
         const selectedVoice = setupVoice.value;
         
-        // Get selected decades
-        const setupDecades = document.getElementById('setupDecades');
-        const selectedDecades = Array.from(setupDecades.selectedOptions).map(opt => opt.value);
+        // Get selected decades from checkboxes
+        const decadeCheckboxes = document.querySelectorAll('input[name="decades"]:checked');
+        const selectedDecades = Array.from(decadeCheckboxes).map(cb => cb.value);
         
         if (selectedDecades.length === 0) {
-            setupDecades.style.borderColor = '#e74c3c';
             alert('⚠️ Please select at least one music era/decade');
+            startBtn.disabled = false;
+            startBtn.textContent = '🎮 Start Music Bingo';
             return;
         }
         
