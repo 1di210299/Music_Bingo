@@ -511,6 +511,9 @@ async function loadSongPool() {
     // Take only the optimal number of songs for this game
     gameState.remaining = shuffled.slice(0, optimalSongs);
     
+    // Try to restore saved game state if it exists
+    restoreGameState();
+    
     console.log(`✓ Game will use ${gameState.remaining.length} songs for ${numPlayers} players`);
     
     console.log(`✓ Loaded ${gameState.pool.length} songs`);
@@ -607,6 +610,80 @@ function startBackgroundMusic() {
 }
 
 // ============================================================================
+// GAME STATE PERSISTENCE
+// ============================================================================
+
+/**
+ * Save current game state to localStorage
+ */
+function saveGameState() {
+    try {
+        const stateToSave = {
+            remaining: gameState.remaining,
+            called: gameState.called,
+            currentTrack: gameState.currentTrack,
+            welcomeAnnounced: gameState.welcomeAnnounced,
+            halfwayAnnounced: gameState.halfwayAnnounced,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('gameState', JSON.stringify(stateToSave));
+        console.log('💾 Game state saved');
+    } catch (e) {
+        console.warn('Could not save game state:', e);
+    }
+}
+
+/**
+ * Restore game state from localStorage if available
+ */
+function restoreGameState() {
+    try {
+        const savedState = localStorage.getItem('gameState');
+        if (!savedState) return;
+        
+        const state = JSON.parse(savedState);
+        
+        // Check if saved state is from the same session (within last 24 hours)
+        const hoursSinceLastSave = (Date.now() - state.timestamp) / (1000 * 60 * 60);
+        if (hoursSinceLastSave > 24) {
+            console.log('ℹ️ Saved game state is too old, starting fresh');
+            localStorage.removeItem('gameState');
+            return;
+        }
+        
+        // Restore the game state
+        if (state.remaining && state.remaining.length > 0) {
+            gameState.remaining = state.remaining;
+            gameState.called = state.called || [];
+            gameState.currentTrack = state.currentTrack;
+            gameState.welcomeAnnounced = state.welcomeAnnounced || false;
+            gameState.halfwayAnnounced = state.halfwayAnnounced || false;
+            console.log(`✓ Restored game state: ${gameState.called.length} songs called, ${gameState.remaining.length} remaining`);
+            
+            // Update UI to reflect restored state
+            if (gameState.currentTrack) {
+                updateCurrentTrackDisplay(gameState.currentTrack);
+            }
+            if (gameState.called.length > 0) {
+                updateCalledList();
+            }
+            updateStats();
+        }
+    } catch (e) {
+        console.warn('Could not restore game state:', e);
+        localStorage.removeItem('gameState');
+    }
+}
+
+/**
+ * Clear saved game state (for reset)
+ */
+function clearGameState() {
+    localStorage.removeItem('gameState');
+    console.log('🗑️ Game state cleared');
+}
+
+// ============================================================================
 // CORE GAME LOGIC
 // ============================================================================
 
@@ -631,6 +708,9 @@ async function playNextTrack() {
     const track = gameState.remaining.shift();
     gameState.called.push(track);
     gameState.currentTrack = track;
+    
+    // Save game state to localStorage
+    saveGameState();
     
     // Update UI immediately
     updateCurrentTrackDisplay(track);
@@ -1150,6 +1230,9 @@ function resetGame() {
     gameState.isPlaying = false;
     gameState.welcomeAnnounced = false;
     gameState.halfwayAnnounced = false;
+    
+    // Clear saved game state
+    clearGameState();
     
     // Reset UI
     document.getElementById('currentTrack').style.display = 'none';
