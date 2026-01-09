@@ -511,8 +511,23 @@ async function loadSongPool() {
     // Take only the optimal number of songs for this game
     gameState.remaining = shuffled.slice(0, optimalSongs);
     
-    // Try to restore saved game state if it exists
-    restoreGameState();
+    // Try to restore saved game state ONLY if songs were already called
+    const savedState = localStorage.getItem('gameState');
+    if (savedState) {
+        try {
+            const state = JSON.parse(savedState);
+            // Only restore if there were songs already played (not a fresh start)
+            if (state.called && state.called.length > 0) {
+                restoreGameState();
+            } else {
+                console.log('ℹ️ No songs called yet, starting fresh game');
+                localStorage.removeItem('gameState');
+            }
+        } catch (e) {
+            console.warn('Could not parse saved state:', e);
+            localStorage.removeItem('gameState');
+        }
+    }
     
     console.log(`✓ Game will use ${gameState.remaining.length} songs for ${numPlayers} players`);
     
@@ -651,23 +666,41 @@ function restoreGameState() {
             return;
         }
         
-        // Restore the game state
+        // Restore the game state, but validate songs exist in current pool
         if (state.remaining && state.remaining.length > 0) {
-            gameState.remaining = state.remaining;
-            gameState.called = state.called || [];
-            gameState.currentTrack = state.currentTrack;
-            gameState.welcomeAnnounced = state.welcomeAnnounced || false;
-            gameState.halfwayAnnounced = state.halfwayAnnounced || false;
-            console.log(`✓ Restored game state: ${gameState.called.length} songs called, ${gameState.remaining.length} remaining`);
+            // Create a Set of valid IDs from current pool
+            const validIds = new Set(gameState.pool.map(song => song.id));
             
-            // Update UI to reflect restored state
-            if (gameState.currentTrack) {
-                updateCurrentTrackDisplay(gameState.currentTrack);
+            // Filter out songs that no longer exist in the pool
+            const validRemaining = state.remaining.filter(song => validIds.has(song.id));
+            const validCalled = (state.called || []).filter(song => validIds.has(song.id));
+            
+            // Only restore if we still have valid songs
+            if (validRemaining.length > 0) {
+                gameState.remaining = validRemaining;
+                gameState.called = validCalled;
+                gameState.currentTrack = state.currentTrack && validIds.has(state.currentTrack.id) ? state.currentTrack : null;
+                gameState.welcomeAnnounced = state.welcomeAnnounced || false;
+                gameState.halfwayAnnounced = state.halfwayAnnounced || false;
+                
+                const invalidCount = (state.remaining.length - validRemaining.length) + ((state.called?.length || 0) - validCalled.length);
+                if (invalidCount > 0) {
+                    console.log(`ℹ️ Filtered out ${invalidCount} songs no longer in pool`);
+                }
+                console.log(`✓ Restored game state: ${gameState.called.length} songs called, ${gameState.remaining.length} remaining`);
+                
+                // Update UI to reflect restored state
+                if (gameState.currentTrack) {
+                    updateCurrentTrackDisplay(gameState.currentTrack);
+                }
+                if (gameState.called.length > 0) {
+                    updateCalledList();
+                }
+                updateStats();
+            } else {
+                console.log('ℹ️ No valid songs in saved state, starting fresh');
+                localStorage.removeItem('gameState');
             }
-            if (gameState.called.length > 0) {
-                updateCalledList();
-            }
-            updateStats();
         }
     } catch (e) {
         console.warn('Could not restore game state:', e);
