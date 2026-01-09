@@ -362,11 +362,12 @@ button:disabled {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 20px;
     padding: 0;
-    max-width: 500px;
+    max-width: 700px;  /* Increased from 500px */
     width: 90%;
+    max-height: 90vh;  /* Limit height */
+    overflow-y: auto;  /* Enable scroll if needed */
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     animation: slideUp 0.4s ease;
-    overflow: hidden;
 }
 
 .modal-header {
@@ -397,12 +398,12 @@ button:disabled {
 }
 
 .modal-body {
-    padding: 30px;
+    padding: 25px 30px;  /* Reduced from 30px */
     background: white;
 }
 
 .setup-field {
-    margin-bottom: 25px;
+    margin-bottom: 20px;  /* Reduced from 25px */
 }
 
 .setup-field label {
@@ -474,23 +475,23 @@ button:disabled {
 
 .voice-cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    margin-top: 15px;
+    grid-template-columns: repeat(4, 1fr);  /* 4 columns instead of 2 */
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .voice-card {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     border: 3px solid transparent;
     border-radius: 12px;
-    padding: 15px;
+    padding: 12px;  /* Reduced from 15px */
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 10px;
+    gap: 8px;  /* Reduced from 10px */
 }
 
 .voice-card:hover {
@@ -511,15 +512,15 @@ button:disabled {
 }
 
 .voice-icon {
-    font-size: 2.5em;
-    width: 60px;
-    height: 60px;
+    font-size: 2em;  /* Reduced from 2.5em */
+    width: 50px;  /* Reduced from 60px */
+    height: 50px;  /* Reduced from 60px */
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.3);
-    margin-bottom: 5px;
+    margin-bottom: 3px;  /* Reduced from 5px */
 }
 
 .voice-icon.female {
@@ -541,12 +542,12 @@ button:disabled {
 }
 
 .voice-info strong {
-    font-size: 1.1em;
+    font-size: 0.95em;  /* Reduced from 1.1em */
     color: #2c3e50;
 }
 
 .voice-info span {
-    font-size: 0.85em;
+    font-size: 0.75em;  /* Reduced from 0.85em */
     color: #7f8c8d;
 }
 
@@ -554,13 +555,13 @@ button:disabled {
     background: rgba(255, 255, 255, 0.9);
     border: 2px solid #3498db;
     color: #3498db;
-    padding: 8px 20px;
+    padding: 6px 16px;  /* Reduced from 8px 20px */
     border-radius: 20px;
-    font-size: 0.9em;
+    font-size: 0.8em;  /* Reduced from 0.9em */
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-top: 5px;
+    margin-top: 3px;  /* Reduced from 5px */
 }
 
 .preview-btn:hover {
@@ -639,11 +640,22 @@ button:disabled {
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(50px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Tablet responsive (between mobile and desktop) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .modal-content {
+        max-width: 650px;
+    }
+    
+    .voice-cards {
+        grid-template-columns: repeat(4, 1fr);
     }
 }
 
@@ -667,18 +679,23 @@ button:disabled {
     
     /* Voice cards responsive */
     .voice-cards {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);  /* 2 columns on mobile */
         gap: 10px;
     }
     
     .voice-card {
-        padding: 12px;
+        padding: 10px;
     }
     
     .voice-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 2em;
+        width: 45px;
+        height: 45px;
+        font-size: 1.8em;
+    }
+    
+    .modal-content {
+        max-width: 95%;
+        max-height: 95vh;
     }
 }
 
