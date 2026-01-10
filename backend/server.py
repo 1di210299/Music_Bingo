@@ -164,6 +164,50 @@ def generate_tts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/upload-logo', methods=['POST'])
+def upload_logo():
+    """Upload pub logo and return URL"""
+    try:
+        if 'logo' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['logo']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'}
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'}), 400
+        
+        # Create logos directory if it doesn't exist
+        logos_dir = os.path.join(DATA_DIR, 'logos')
+        os.makedirs(logos_dir, exist_ok=True)
+        
+        # Generate unique filename
+        import time
+        timestamp = int(time.time())
+        safe_filename = f'pub_logo_{timestamp}.{file_ext}'
+        file_path = os.path.join(logos_dir, safe_filename)
+        
+        # Save file
+        file.save(file_path)
+        
+        # Return URL
+        logo_url = f'/data/logos/{safe_filename}'
+        
+        return jsonify({
+            'success': True,
+            'url': logo_url,
+            'filename': safe_filename
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/announcements-ai')
 def get_ai_announcements():
     """Serve AI-generated announcements if available"""

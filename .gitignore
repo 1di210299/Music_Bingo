@@ -16,10 +16,17 @@ build/
 # Data files (regenerate these)
 data/pool.json
 data/cards/*.pdf
+data/logos/*.png
+data/logos/*.jpg
+data/logos/*.jpeg
+data/logos/*.svg
+data/logos/*.gif
+data/logos/*.webp
 
 # Keep example files
 !data/announcements.json
 !data/cards/.gitkeep
+!data/logos/README.md
 
 # Environment variables
 .env

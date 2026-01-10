@@ -148,9 +148,19 @@
                 </div>
                 
                 <div class="setup-field">
-                    <label for="setupPubLogo">🖼️ Pub Logo URL</label>
-                    <input type="url" id="setupPubLogo" placeholder="https://example.com/logo.png">
-                    <small>Enter the URL of your pub's logo (will appear on bingo cards)</small>
+                    <label for="setupPubLogo">🖼️ Pub Logo</label>
+                    <div class="logo-input-group">
+                        <input type="url" id="setupPubLogo" placeholder="https://example.com/logo.png">
+                        <button type="button" class="upload-btn" onclick="document.getElementById('logoFileInput').click()">
+                            📤 Upload
+                        </button>
+                        <input type="file" id="logoFileInput" accept="image/*" style="display: none;" onchange="handleLogoUpload(event)">
+                    </div>
+                    <small>Enter a URL or upload your logo (PNG, JPG, or SVG)</small>
+                    <div id="logoPreview" class="logo-preview" style="display: none;">
+                        <img id="logoPreviewImg" src="" alt="Logo preview">
+                        <button type="button" class="remove-btn" onclick="removeLogo()">✕</button>
+                    </div>
                 </div>
                 
                 <div class="setup-field">

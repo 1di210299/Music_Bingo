@@ -699,6 +699,75 @@ button:disabled {
     font-size: 1em;
 }
 
+/* Logo Upload Styles */
+.logo-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.logo-input-group input[type="url"] {
+    flex: 1;
+}
+
+.upload-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.logo-preview {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 2px dashed #cbd5e0;
+}
+
+.logo-preview img {
+    max-width: 150px;
+    max-height: 80px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: white;
+    padding: 5px;
+}
+
+.remove-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.remove-btn:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
 .setup-estimation {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;

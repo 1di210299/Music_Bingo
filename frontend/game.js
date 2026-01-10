@@ -108,7 +108,10 @@ function initializeSetupModal() {
     if (savedVenue) setupVenueName.value = savedVenue;
     if (savedPlayers) setupNumPlayers.value = savedPlayers;
     if (savedVoice) document.getElementById('setupVoice').value = savedVoice;
-    if (savedPubLogo) document.getElementById('setupPubLogo').value = savedPubLogo;
+    if (savedPubLogo) {
+        document.getElementById('setupPubLogo').value = savedPubLogo;
+        showLogoPreview(savedPubLogo);
+    }
     if (savedSocialMedia) document.getElementById('setupSocialMedia').value = savedSocialMedia;
     if (savedIncludeQR === 'true') document.getElementById('setupIncludeQR').checked = true;
     
@@ -1741,3 +1744,83 @@ async function generateCards() {
     }
 }
 
+/**
+ * Handle logo file upload
+ */
+async function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('⚠️ Please select an image file (PNG, JPG, or SVG)');
+        return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('⚠️ Image is too large. Please use a file smaller than 5MB.');
+        return;
+    }
+    
+    // Show loading state
+    const uploadBtn = event.target.parentElement.querySelector('.upload-btn');
+    const originalText = uploadBtn.textContent;
+    uploadBtn.textContent = '⏳ Uploading...';
+    uploadBtn.disabled = true;
+    
+    try {
+        // Create FormData
+        const formData = new FormData();
+        formData.append('logo', file);
+        
+        // Upload to server
+        const response = await fetch(`${CONFIG.API_URL}/api/upload-logo`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
+        
+        const result = await response.json();
+        
+        // Set the URL in the input field
+        document.getElementById('setupPubLogo').value = result.url;
+        
+        // Show preview
+        showLogoPreview(result.url);
+        
+        console.log('✓ Logo uploaded successfully:', result.url);
+        
+    } catch (error) {
+        console.error('Error uploading logo:', error);
+        alert('❌ Error uploading logo. Please try again or use a URL instead.');
+    } finally {
+        uploadBtn.textContent = originalText;
+        uploadBtn.disabled = false;
+        // Clear the file input
+        event.target.value = '';
+    }
+}
+
+/**
+ * Show logo preview
+ */
+function showLogoPreview(url) {
+    const preview = document.getElementById('logoPreview');
+    const img = document.getElementById('logoPreviewImg');
+    
+    img.src = url;
+    preview.style.display = 'flex';
+}
+
+/**
+ * Remove uploaded logo
+ */
+function removeLogo() {
+    document.getElementById('setupPubLogo').value = '';
+    document.getElementById('logoPreview').style.display = 'none';
+    document.getElementById('logoPreviewImg').src = '';
+}
