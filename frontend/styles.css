@@ -768,6 +768,26 @@ button:disabled {
     transform: scale(1.1);
 }
 
+/* Social Media Field (appears when QR checkbox is checked) */
+#socialMediaField {
+    background: #f0f4ff;
+    border-left: 3px solid #667eea;
+    padding: 15px;
+    border-radius: 8px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .setup-estimation {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;

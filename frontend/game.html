@@ -164,17 +164,17 @@
                 </div>
                 
                 <div class="setup-field">
-                    <label for="setupSocialMedia">📱 Social Media Handle</label>
-                    <input type="text" id="setupSocialMedia" placeholder="@YourPubName or Facebook.com/YourPub">
-                    <small>Enter your Instagram, Facebook, or other social media handle</small>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="setupIncludeQR" onchange="toggleSocialMediaField()">
+                        <span>📲 Include QR code for customers to follow your social media</span>
+                    </label>
+                    <small>Customers can scan the QR code on their bingo cards to follow you</small>
                 </div>
                 
-                <div class="setup-field">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="setupIncludeQR">
-                        <span>📲 Include QR code linking to social media</span>
-                    </label>
-                    <small>Customers can scan to follow you (requires social media link above)</small>
+                <div class="setup-field" id="socialMediaField" style="display: none; margin-top: 15px; padding-left: 35px;">
+                    <label for="setupSocialMedia">📱 Social Media Link *</label>
+                    <input type="url" id="setupSocialMedia" placeholder="https://instagram.com/yourpub or https://facebook.com/yourpub">
+                    <small>Enter the full link to your Instagram, Facebook, TikTok, or website</small>
                 </div>
                 
                 <div class="setup-estimation" id="setupEstimation">

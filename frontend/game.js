@@ -113,7 +113,10 @@ function initializeSetupModal() {
         showLogoPreview(savedPubLogo);
     }
     if (savedSocialMedia) document.getElementById('setupSocialMedia').value = savedSocialMedia;
-    if (savedIncludeQR === 'true') document.getElementById('setupIncludeQR').checked = true;
+    if (savedIncludeQR === 'true') {
+        document.getElementById('setupIncludeQR').checked = true;
+        toggleSocialMediaField(); // Show the field if checkbox was saved as checked
+    }
     
     // Restore decade checkbox selections
     if (savedDecades) {
@@ -1823,4 +1826,18 @@ function removeLogo() {
     document.getElementById('setupPubLogo').value = '';
     document.getElementById('logoPreview').style.display = 'none';
     document.getElementById('logoPreviewImg').src = '';
+}
+
+/**
+ * Toggle social media field when QR checkbox is checked
+ */
+function toggleSocialMediaField() {
+    const checkbox = document.getElementById('setupIncludeQR');
+    const field = document.getElementById('socialMediaField');
+    
+    if (checkbox.checked) {
+        field.style.display = 'block';
+    } else {
+        field.style.display = 'none';
+    }
 }
