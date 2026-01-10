@@ -1762,9 +1762,9 @@ async function handleLogoUpload(event) {
         return;
     }
     
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        alert('⚠️ Image is too large. Please use a file smaller than 5MB.');
+    // Validate file size (max 2MB for better compatibility)
+    if (file.size > 2 * 1024 * 1024) {
+        alert('⚠️ Image is too large. Please use a file smaller than 2MB.\n\nTip: You can compress your image at tinypng.com');
         return;
     }
     

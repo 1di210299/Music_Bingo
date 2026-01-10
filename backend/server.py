@@ -18,6 +18,9 @@ app = Flask(__name__)
 # Enable CORS for all routes (allows frontend to call backend from different origin)
 CORS(app)
 
+# Configure max upload size (5MB)
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+
 # Configuration from environment variables
 ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
 ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
