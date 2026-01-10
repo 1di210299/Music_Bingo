@@ -22,7 +22,7 @@ const CONFIG = {
     API_URL: window.location.origin,  // Same origin as frontend
     
     // Game settings
-    PREVIEW_DURATION_MS: 12000,  // 12 seconds of song preview (Philip's feedback: adjusted from 18s)
+    PREVIEW_DURATION_MS: 15000,  // 15 seconds of song preview
     AUTO_NEXT_DELAY_MS: 15000,  // 15 seconds between songs (optional auto-mode)
     
     // Audio settings
@@ -1398,8 +1398,18 @@ function updateCalledList() {
  * Update statistics
  */
 function updateStats() {
+    const totalSongs = gameState.called.length + gameState.remaining.length;
+    const estimatedMinutes = estimateGameDuration(totalSongs);
+    
+    // Update the stats counters
     document.getElementById('calledCount').textContent = gameState.called.length;
     document.getElementById('remainingCount').textContent = gameState.remaining.length;
+    
+    // Update the top estimation text to show actual game total
+    const estimatedSongsEl = document.getElementById('estimatedSongs');
+    if (estimatedSongsEl) {
+        estimatedSongsEl.textContent = `~${totalSongs} songs, ${estimatedMinutes} min`;
+    }
 }
 
 /**
