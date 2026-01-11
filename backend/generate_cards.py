@@ -22,7 +22,7 @@ import requests
 from io import BytesIO
 
 # ReportLab imports
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -202,29 +202,26 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     header_style = ParagraphStyle(
         'CustomHeader',
         parent=styles['Heading1'],
-        fontSize=20,
+        fontSize=16,
         textColor=colors.HexColor('#667eea'),
         alignment=TA_CENTER,
-        spaceAfter=5*mm,
+        spaceAfter=4*mm,
     )
     
     # Venue style
     venue_style = ParagraphStyle(
         'Venue',
         parent=styles['Normal'],
-        fontSize=12,
+        fontSize=8,
         textColor=colors.HexColor('#4a5568'),
         alignment=TA_CENTER,
-        spaceAfter=8*mm,
+        spaceAfter=2*mm,
     )
     
     # --- HEADER SECTION ---
-    # Title
+    # Title only (no subtitle to save space)
     title = Paragraph(f"MUSIC BINGO at {venue_name}", header_style)
     elements.append(title)
-    
-    subtitle = Paragraph("Mark the song when you hear it play!", venue_style)
-    elements.append(subtitle)
     
     # --- PUB LOGO (if provided) ---
     if pub_logo_path:
@@ -236,9 +233,9 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             orig_width, orig_height = pil_img.size
             aspect = orig_width / orig_height
             
-            # Calculate dimensions with aspect ratio
-            max_width = 80
-            max_height = 40
+            # Calculate dimensions with aspect ratio (smaller for 2-per-page)
+            max_width = 35
+            max_height = 15
             
             if aspect > (max_width / max_height):
                 new_width = max_width * mm
@@ -250,7 +247,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
             pub_logo.hAlign = 'CENTER'
             elements.append(pub_logo)
-            elements.append(Spacer(1, 5*mm))
+            elements.append(Spacer(1, 1*mm))
         except Exception as e:
             pass  # Skip if error
     
@@ -267,12 +264,12 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 cell_style = ParagraphStyle(
                     'FreeCell',
                     parent=styles['Normal'],
-                    fontSize=16,
+                    fontSize=14,
                     textColor=colors.black,
                     alignment=TA_CENTER,
-                    leading=14,
+                    leading=12,
                 )
-                cell_content = Paragraph("<b>FREE</b><br/><font size='8'>www.perfectdj.co.uk</font>", cell_style)
+                cell_content = Paragraph("<b>FREE</b><br/><font size='7'>www.perfectdj.co.uk</font>", cell_style)
             else:
                 song = songs[song_index]
                 song_text = format_song_title(song, max_length=40)
@@ -283,7 +280,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                     fontSize=8,
                     textColor=colors.black,
                     alignment=TA_CENTER,
-                    leading=10,
+                    leading=8,
                 )
                 cell_content = Paragraph(song_text, cell_style)
                 song_index += 1
@@ -291,9 +288,9 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             row_data.append(cell_content)
         grid_data.append(row_data)
     
-    # Create table
-    col_width = 35*mm
-    row_height = 20*mm
+    # Create table - optimized size for 2 per page
+    col_width = 33*mm
+    row_height = 13*mm
     
     table = Table(grid_data, colWidths=[col_width]*GRID_SIZE, rowHeights=[row_height]*GRID_SIZE)
     
@@ -318,7 +315,20 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     ]))
     
     elements.append(table)
-    elements.append(Spacer(1, 5*mm))
+    elements.append(Spacer(1, 1*mm))
+    
+    # --- PRIZES SECTION ---
+    prizes_style = ParagraphStyle(
+        'Prizes',
+        parent=styles['Normal'],
+        fontSize=7,
+        textColor=colors.black,
+        alignment=TA_CENTER,
+        leading=9,
+    )
+    prizes_text = Paragraph("<b>PRIZES:</b> All 4 Corners • First Line • Full House", prizes_style)
+    elements.append(prizes_text)
+    elements.append(Spacer(1, 3*mm))
     
     # --- FOOTER SECTION ---
     footer_elements = []
@@ -336,11 +346,12 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 social_text_style = ParagraphStyle(
                     'SocialText',
                     parent=styles['Normal'],
-                    fontSize=10,
+                    fontSize=9,
                     alignment=TA_LEFT,
                     leftIndent=5*mm,
+                    leading=11,
                 )
-                social_text = Paragraph(f"<b>Follow us!</b><br/>{social_media_url}", social_text_style)
+                social_text = Paragraph(f"<b>Join Our Social Media To Play &amp; Claim Your Prize!</b><br/>{social_media_url}", social_text_style)
                 
                 footer_data.append([qr_img, social_text])
                 
@@ -358,24 +369,24 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     card_style = ParagraphStyle(
         'CardNumber',
         parent=styles['Normal'],
-        fontSize=10,
+        fontSize=7,
         textColor=colors.HexColor('#667eea'),
         alignment=TA_CENTER,
     )
     card_text = Paragraph(f"<b>Card #{card_num}</b>", card_style)
-    elements.append(Spacer(1, 3*mm))
+    elements.append(Spacer(1, 0.5*mm))
     elements.append(card_text)
     
     # Perfect DJ footer
     footer_style = ParagraphStyle(
         'Footer',
         parent=styles['Normal'],
-        fontSize=8,
+        fontSize=5,
         textColor=colors.gray,
         alignment=TA_CENTER,
     )
     footer = Paragraph(f"Powered by Perfect DJ - {WEBSITE_URL}", footer_style)
-    elements.append(Spacer(1, 2*mm))
+    elements.append(Spacer(1, 0.5*mm))
     elements.append(footer)
     
     return elements
@@ -448,16 +459,16 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     
     doc = SimpleDocTemplate(
         str(OUTPUT_FILE),
-        pagesize=A4,
+        pagesize=A4,  # Portrait for 2 smaller cards vertically
         leftMargin=15*mm,
         rightMargin=15*mm,
-        topMargin=15*mm,
-        bottomMargin=15*mm,
+        topMargin=10*mm,
+        bottomMargin=10*mm,
     )
     
     story = []
     
-    # Generate cards
+    # Generate cards (2 per page)
     for i in range(NUM_CARDS):
         # Shuffle songs for this card
         card_songs = random.sample(selected_songs, SONGS_PER_CARD)
@@ -474,10 +485,13 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
         
         story.extend(card_elements)
         
-        # Add page break except for last card
-        if i < NUM_CARDS - 1:
+        # Add page break after every 2 cards (except for the last card)
+        if (i + 1) % 2 == 0 and i < NUM_CARDS - 1:
             from reportlab.platypus import PageBreak
             story.append(PageBreak())
+        # Add spacer between cards on same page
+        elif i < NUM_CARDS - 1:
+            story.append(Spacer(1, 5*mm))
         
         if (i + 1) % 10 == 0:
             print(f"  ✓ Generated {i + 1}/{NUM_CARDS} cards")
@@ -502,14 +516,14 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     print(f"{'='*60}")
     print(f"Generated: {OUTPUT_FILE}")
     print(f"Cards: {NUM_CARDS}")
-    print(f"Pages: {NUM_CARDS}")
+    print(f"Pages: {(NUM_CARDS + 1) // 2} (2 cards per page)")
     print(f"Songs per card: {SONGS_PER_CARD}")
     print(f"Total songs available: {len(selected_songs)}")
     print(f"{'='*60}\n")
     
     return {
         'num_cards': NUM_CARDS,
-        'num_pages': NUM_CARDS,
+        'num_pages': (NUM_CARDS + 1) // 2,  # 2 cards per page
         'songs_per_card': SONGS_PER_CARD,
         'total_songs': len(selected_songs)
     }
