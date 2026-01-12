@@ -627,7 +627,7 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     parallel_start = time.time()
     
     batch_size = 10  # 10 cards per batch
-    num_workers = min(mp.cpu_count() - 1, 5)  # Max 5 workers, leave 1 CPU free
+    num_workers = max(1, min(mp.cpu_count() - 1, 5))  # Min 1, Max 5 workers
     print(f"   Using {num_workers} parallel workers")
     
     # Prepare batch data
