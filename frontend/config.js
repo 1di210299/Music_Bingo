@@ -3,9 +3,27 @@
  * Loads environment variables for the game
  */
 
+// Detect backend URL
+const BACKEND_URL = (() => {
+    // In App Platform, BACKEND_URL will be injected
+    if (window.BACKEND_URL) return window.BACKEND_URL;
+    
+    // Local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5001';
+    }
+    
+    // Same origin (droplet setup)
+    return window.location.origin;
+})();
+
 // Load configuration from .env file
 // In production, these would be set by your build system or server
 const CONFIG = {
+    // Backend API URL
+    API_URL: BACKEND_URL,
+    BACKEND_URL: BACKEND_URL,
+    
     // ElevenLabs API (read from environment or .env file)
     ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY || '',
     VOICE_ID: process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM',

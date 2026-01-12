@@ -622,58 +622,109 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
             qr_buffer_data = qr_buffer_cache.getvalue()  # Get bytes for serialization
             print(f"✓ Generated QR code ({time.time()-step_start:.2f}s)")
     
-    # **PARALLEL GENERATION** - Split into batches
-    print(f"\n📄 Generating PDF cards in parallel...")
-    parallel_start = time.time()
+    # Check if parallel processing is beneficial (needs 2+ CPUs)
+    num_cpus = mp.cpu_count()
+    use_parallel = num_cpus >= 2
     
-    batch_size = 10  # 10 cards per batch
-    num_workers = max(1, min(mp.cpu_count() - 1, 5))  # Min 1, Max 5 workers
-    print(f"   Using {num_workers} parallel workers")
-    
-    # Prepare batch data
-    batches = []
-    for i in range(0, NUM_CARDS, batch_size):
-        cards_range = list(range(i + 1, min(i + batch_size + 1, NUM_CARDS + 1)))
-        batches.append((
-            i // batch_size,
-            cards_range,
-            selected_songs,
-            venue_name,
-            pub_logo_path,
-            social_media,
-            include_qr,
-            game_number,
-            game_date,
-            qr_buffer_data
-        ))
-    
-    # Generate PDFs in parallel
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        temp_pdfs = list(executor.map(generate_batch_pdf, batches))
-    
-    print(f"  ✓ All batches generated ({time.time()-parallel_start:.2f}s)")
-    
-    # Merge all PDFs
-    print(f"\n📝 Merging PDF batches...")
-    merge_start = time.time()
-    
-    merger = PdfWriter()
-    for pdf_path in temp_pdfs:
-        reader = PdfReader(pdf_path)
-        for page in reader.pages:
-            merger.add_page(page)
-    
-    with open(str(OUTPUT_FILE), 'wb') as output_file:
-        merger.write(output_file)
-    
-    print(f"   ✓ PDF merged ({time.time()-merge_start:.2f}s)")
-    
-    # Cleanup temp files
-    for pdf_path in temp_pdfs:
-        try:
-            os.unlink(pdf_path)
-        except:
-            pass
+    if use_parallel:
+        # **PARALLEL GENERATION** - Split into batches
+        print(f"\n📄 Generating PDF cards in parallel...")
+        parallel_start = time.time()
+        
+        batch_size = 10  # 10 cards per batch
+        num_workers = max(1, min(num_cpus - 1, 5))  # Min 1, Max 5 workers
+        print(f"   Using {num_workers} parallel workers (CPUs: {num_cpus})")
+        
+        # Prepare batch data
+        batches = []
+        for i in range(0, NUM_CARDS, batch_size):
+            cards_range = list(range(i + 1, min(i + batch_size + 1, NUM_CARDS + 1)))
+            batches.append((
+                i // batch_size,
+                cards_range,
+                selected_songs,
+                venue_name,
+                pub_logo_path,
+                social_media,
+                include_qr,
+                game_number,
+                game_date,
+                qr_buffer_data
+            ))
+        
+        # Generate PDFs in parallel
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            temp_pdfs = list(executor.map(generate_batch_pdf, batches))
+        
+        print(f"  ✓ All batches generated ({time.time()-parallel_start:.2f}s)")
+        
+        # Merge all PDFs
+        print(f"\n📝 Merging PDF batches...")
+        merge_start = time.time()
+        
+        merger = PdfWriter()
+        for pdf_path in temp_pdfs:
+            reader = PdfReader(pdf_path)
+            for page in reader.pages:
+                merger.add_page(page)
+        
+        with open(str(OUTPUT_FILE), 'wb') as output_file:
+            merger.write(output_file)
+        
+        print(f"   ✓ PDF merged ({time.time()-merge_start:.2f}s)")
+        
+        # Cleanup temp files
+        for pdf_path in temp_pdfs:
+            try:
+                os.unlink(pdf_path)
+            except:
+                pass
+    else:
+        # **SEQUENTIAL GENERATION** - Single core optimization
+        print(f"\n📄 Generating PDF cards (single-core mode)...")
+        print(f"   CPUs: {num_cpus} - Using sequential generation")
+        
+        doc = SimpleDocTemplate(
+            str(OUTPUT_FILE),
+            pagesize=A4,
+            leftMargin=15*mm,
+            rightMargin=15*mm,
+            topMargin=10*mm,
+            bottomMargin=10*mm,
+        )
+        
+        story = []
+        cards_start = time.time()
+        
+        for i in range(NUM_CARDS):
+            card_songs = random.sample(selected_songs, SONGS_PER_CARD)
+            
+            card_elements = create_bingo_card(
+                card_songs,
+                i + 1,
+                venue_name,
+                pub_logo_path,
+                social_media,
+                include_qr,
+                game_number,
+                game_date,
+                qr_buffer_cache
+            )
+            
+            story.extend(card_elements)
+            
+            if (i + 1) % 2 == 0 and i < NUM_CARDS - 1:
+                story.append(PageBreak())
+            elif i < NUM_CARDS - 1:
+                story.append(Spacer(1, 5*mm))
+            
+            if (i + 1) % 10 == 0:
+                print(f"  ✓ Generated {i + 1}/{NUM_CARDS} cards ({time.time()-cards_start:.2f}s)")
+        
+        print(f"\n📝 Building PDF document...")
+        build_start = time.time()
+        doc.build(story)
+        print(f"   ✓ PDF built ({time.time()-build_start:.2f}s)")
     
     # Cleanup temp logo file
     if pub_logo_path:

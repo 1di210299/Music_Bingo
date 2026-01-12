@@ -1,0 +1,58 @@
+name: music-bingo
+region: lon
+
+services:
+  - name: backend
+    github:
+      repo: 1di210299/Music_Bingo
+      branch: main
+      deploy_on_push: true
+    
+    build_command: pip install -r backend/requirements.txt
+    run_command: gunicorn --workers 2 --bind 0.0.0.0:8080 --timeout 120 --chdir backend wsgi:app
+    
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    
+    http_port: 8080
+    
+    routes:
+      - path: /api
+      - path: /data
+    
+    envs:
+      - key: ELEVENLABS_API_KEY
+        value: ${ELEVENLABS_API_KEY}
+        type: SECRET
+      - key: ELEVENLABS_VOICE_ID
+        value: "21m00Tcm4TlvDq8ikWAM"
+      - key: VENUE_NAME
+        value: "Music Bingo"
+      - key: OPENAI_API_KEY
+        value: ${OPENAI_API_KEY}
+        type: SECRET
+
+  - name: frontend
+    github:
+      repo: 1di210299/Music_Bingo
+      branch: main
+      deploy_on_push: true
+    
+    source_dir: frontend
+    
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    
+    http_port: 8080
+    
+    routes:
+      - path: /
+    
+    run_command: bash start.sh
+    
+    envs:
+      - key: BACKEND_URL
+        value: ${backend.PUBLIC_URL}
+        scope: RUN_TIME
