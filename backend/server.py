@@ -230,6 +230,7 @@ def generate_cards_api():
         import subprocess
         import json
         from pathlib import Path
+        from datetime import datetime
         
         # Get parameters from request
         data = request.get_json()
@@ -238,6 +239,12 @@ def generate_cards_api():
         pub_logo = data.get('pub_logo')  # URL or path to logo
         social_media = data.get('social_media')  # Social media URL
         include_qr = data.get('include_qr', False)  # Include QR code
+        game_number = data.get('game_number', 1)  # Game number (default 1)
+        game_date = data.get('game_date')  # Optional custom date
+        
+        # If no date provided, use today's date
+        if not game_date:
+            game_date = datetime.now().strftime("%A, %B %d, %Y")
         
         # Path to generate_cards.py
         script_path = os.path.join(BASE_DIR, 'backend', 'generate_cards.py')
@@ -246,7 +253,9 @@ def generate_cards_api():
         cmd = [
             'python3', script_path,
             '--venue_name', venue_name,
-            '--num_players', str(num_players)
+            '--num_players', str(num_players),
+            '--game_number', str(game_number),
+            '--game_date', game_date
         ]
         
         if pub_logo:
@@ -285,6 +294,8 @@ def generate_cards_api():
             'message': 'Cards generated successfully',
             'venue_name': venue_name,
             'num_players': num_players,
+            'game_number': game_number,
+            'game_date': game_date,
             'pub_logo': pub_logo if pub_logo else None,
             'social_media': social_media if social_media else None,
             'include_qr': include_qr,

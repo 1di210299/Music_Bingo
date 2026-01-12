@@ -191,39 +191,45 @@ def get_logo_with_aspect_ratio(logo_buffer: BytesIO, max_width: float = 40, max_
 
 def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str, 
                      pub_logo_path: str = None, social_media_url: str = None, 
-                     include_qr: bool = False) -> List:
+                     include_qr: bool = False, game_number: int = 1, game_date: str = None) -> List:
     """Create a single bingo card with ReportLab elements"""
     elements = []
     
     # Styles
     styles = getSampleStyleSheet()
     
-    # Header style
+    # Header style - LARGER title as requested
     header_style = ParagraphStyle(
         'CustomHeader',
         parent=styles['Heading1'],
-        fontSize=16,
+        fontSize=18,  # Reduced from 24 to 18 to save space
         textColor=colors.HexColor('#667eea'),
         alignment=TA_CENTER,
-        spaceAfter=4*mm,
+        spaceAfter=2*mm,  # Reduced from 3mm to 2mm
+        fontName='Helvetica-Bold',
     )
     
     # Venue style
     venue_style = ParagraphStyle(
         'Venue',
         parent=styles['Normal'],
-        fontSize=8,
+        fontSize=8,  # Reduced from 10 to 8
         textColor=colors.HexColor('#4a5568'),
         alignment=TA_CENTER,
-        spaceAfter=2*mm,
+        spaceAfter=1*mm,  # Reduced
     )
     
-    # --- HEADER SECTION ---
-    # Title only (no subtitle to save space)
-    title = Paragraph(f"MUSIC BINGO at {venue_name}", header_style)
-    elements.append(title)
+    # Date and game number style
+    date_style = ParagraphStyle(
+        'DateGame',
+        parent=styles['Normal'],
+        fontSize=7,  # Reduced from 9 to 7
+        textColor=colors.HexColor('#4a5568'),
+        alignment=TA_CENTER,
+        spaceAfter=2*mm,  # Reduced from 3mm to 2mm
+    )
     
-    # --- PUB LOGO (if provided) ---
+    # --- HEADER SECTION WITH LOGO ON TOP LEFT ---
     if pub_logo_path:
         try:
             from PIL import Image as PILImage
@@ -233,9 +239,9 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             orig_width, orig_height = pil_img.size
             aspect = orig_width / orig_height
             
-            # Calculate dimensions with aspect ratio (smaller for 2-per-page)
-            max_width = 35
-            max_height = 15
+            # LARGER logo as requested (on top left)
+            max_width = 40  # Reduced from 50 to 40
+            max_height = 20  # Reduced from 25 to 20
             
             if aspect > (max_width / max_height):
                 new_width = max_width * mm
@@ -245,11 +251,56 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 new_width = (max_height * aspect) * mm
             
             pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
-            pub_logo.hAlign = 'CENTER'
-            elements.append(pub_logo)
-            elements.append(Spacer(1, 1*mm))
+            
+            # Perfect DJ logo on right (smaller)
+            perfect_dj_logo = None
+            try:
+                dj_logo_path = Path(__file__).parent.parent / 'frontend' / 'assets' / 'perfect-dj-logo.png'
+                if dj_logo_path.exists():
+                    perfect_dj_logo = Image(str(dj_logo_path), width=15*mm, height=15*mm)  # Reduced from 20mm
+            except:
+                pass
+            
+            # Create header table with logos on left and right
+            if perfect_dj_logo:
+                # Ajustado para mover el título más a la izquierda
+                header_table = Table([[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style), perfect_dj_logo]], 
+                                    colWidths=[30*mm, 90*mm, 30*mm])  # 30mm izq + 30mm der = balanceado
+                header_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                    ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
+                ]))
+            else:
+                header_table = Table([[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style)]], 
+                                    colWidths=[45*mm, 115*mm])  # Adjusted
+                header_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                ]))
+            
+            elements.append(header_table)
+            elements.append(Spacer(1, 1*mm))  # Reduced from 2mm to 1mm
         except Exception as e:
-            pass  # Skip if error
+            print(f"Error adding pub logo: {e}")
+            # Fallback to text-only title
+            title = Paragraph(f"<b>MUSIC BINGO</b><br/><font size='10'>{venue_name}</font>", header_style)
+            elements.append(title)
+    else:
+        # No pub logo - just title
+        title = Paragraph(f"<b>MUSIC BINGO</b><br/><font size='10'>{venue_name}</font>", header_style)
+        elements.append(title)
+    
+    # Date and game number
+    if not game_date:
+        from datetime import datetime
+        game_date = datetime.now().strftime("%A, %B %d, %Y")
+    
+    date_text = Paragraph(f"<b>{game_date}</b> • Game #{game_number}", date_style)
+    elements.append(date_text)
+    elements.append(Spacer(1, 1*mm))  # Reduced from 2mm to 1mm
     
     # --- BINGO GRID ---
     # Create 5x5 grid data
@@ -277,10 +328,10 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 cell_style = ParagraphStyle(
                     'SongCell',
                     parent=styles['Normal'],
-                    fontSize=8,
+                    fontSize=7,  # Reduced from 8
                     textColor=colors.black,
                     alignment=TA_CENTER,
-                    leading=8,
+                    leading=7,  # Reduced from 8
                 )
                 cell_content = Paragraph(song_text, cell_style)
                 song_index += 1
@@ -289,8 +340,8 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         grid_data.append(row_data)
     
     # Create table - optimized size for 2 per page
-    col_width = 33*mm
-    row_height = 13*mm
+    col_width = 28*mm  # Reduced from 30mm
+    row_height = 10*mm  # Reduced from 11mm
     
     table = Table(grid_data, colWidths=[col_width]*GRID_SIZE, rowHeights=[row_height]*GRID_SIZE)
     
@@ -315,20 +366,57 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     ]))
     
     elements.append(table)
-    elements.append(Spacer(1, 1*mm))
+    elements.append(Spacer(1, 1*mm))  # Reduced from 2mm
     
-    # --- PRIZES SECTION ---
-    prizes_style = ParagraphStyle(
-        'Prizes',
+    # --- PRIZES SECTION - LARGER and with editable fields ---
+    prizes_header_style = ParagraphStyle(
+        'PrizesHeader',
+        parent=styles['Normal'],
+        fontSize=9,  # Reduced from 11 to 9
+        textColor=colors.black,
+        alignment=TA_CENTER,
+        leading=11,  # Reduced
+        fontName='Helvetica-Bold',
+    )
+    
+    prizes_detail_style = ParagraphStyle(
+        'PrizesDetail',
         parent=styles['Normal'],
         fontSize=7,
         textColor=colors.black,
-        alignment=TA_CENTER,
+        alignment=TA_LEFT,
         leading=9,
     )
-    prizes_text = Paragraph("<b>PRIZES:</b> All 4 Corners • First Line • Full House", prizes_style)
-    elements.append(prizes_text)
-    elements.append(Spacer(1, 3*mm))
+    
+    # Prizes header and single-line format
+    prizes_header = Paragraph("<b>🏆 PRIZES TONIGHT 🏆</b>", prizes_header_style)
+    elements.append(prizes_header)
+    elements.append(Spacer(1, 0.5*mm))
+    
+    # Single line with all three prizes
+    prizes_data = [
+        [
+            Paragraph("<b>All 4 Corners:</b>", prizes_detail_style),
+            Paragraph("__________", prizes_detail_style),
+            Paragraph("<b>First Line:</b>", prizes_detail_style),
+            Paragraph("__________", prizes_detail_style),
+            Paragraph("<b>Full House:</b>", prizes_detail_style),
+            Paragraph("__________", prizes_detail_style)
+        ]
+    ]
+    
+    prizes_table = Table(prizes_data, colWidths=[23*mm, 20*mm, 18*mm, 20*mm, 19*mm, 20*mm])
+    prizes_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 1),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 1),
+        ('TOPPADDING', (0, 0), (-1, -1), 0.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0.5),
+    ]))
+    
+    elements.append(prizes_table)
+    elements.append(Spacer(1, 0.5*mm))
     
     # --- FOOTER SECTION ---
     footer_elements = []
@@ -341,21 +429,21 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 # Create footer table with QR and text side by side
                 footer_data = []
                 
-                qr_img = Image(qr_buffer, width=20*mm, height=20*mm)
+                qr_img = Image(qr_buffer, width=18*mm, height=18*mm)  # Reduced from 20mm
                 
                 social_text_style = ParagraphStyle(
                     'SocialText',
                     parent=styles['Normal'],
-                    fontSize=9,
+                    fontSize=8,  # Reduced from 9
                     alignment=TA_LEFT,
-                    leftIndent=5*mm,
-                    leading=11,
+                    leftIndent=3*mm,  # Reduced from 5mm
+                    leading=9,  # Reduced from 11
                 )
                 social_text = Paragraph(f"<b>Join Our Social Media To Play &amp; Claim Your Prize!</b><br/>{social_media_url}", social_text_style)
                 
                 footer_data.append([qr_img, social_text])
                 
-                footer_table = Table(footer_data, colWidths=[25*mm, 150*mm])
+                footer_table = Table(footer_data, colWidths=[22*mm, 118*mm])  # Adjusted - more compact
                 footer_table.setStyle(TableStyle([
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                     ('ALIGN', (0, 0), (0, 0), 'CENTER'),
@@ -374,7 +462,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         alignment=TA_CENTER,
     )
     card_text = Paragraph(f"<b>Card #{card_num}</b>", card_style)
-    elements.append(Spacer(1, 0.5*mm))
+    elements.append(Spacer(1, 0.3*mm))  # Reduced from 0.5mm
     elements.append(card_text)
     
     # Perfect DJ footer
@@ -386,14 +474,15 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         alignment=TA_CENTER,
     )
     footer = Paragraph(f"Powered by Perfect DJ - {WEBSITE_URL}", footer_style)
-    elements.append(Spacer(1, 0.5*mm))
+    elements.append(Spacer(1, 0.3*mm))  # Reduced from 0.5mm
     elements.append(footer)
     
     return elements
 
 
 def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
-                  pub_logo: str = None, social_media: str = None, include_qr: bool = False):
+                  pub_logo: str = None, social_media: str = None, include_qr: bool = False,
+                  game_number: int = 1, game_date: str = None):
     """Generate all bingo cards"""
     
     print(f"\n{'='*60}")
@@ -473,14 +562,16 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
         # Shuffle songs for this card
         card_songs = random.sample(selected_songs, SONGS_PER_CARD)
         
-        # Create card
+        # Create card with game number and date
         card_elements = create_bingo_card(
             card_songs,
             i + 1,
             venue_name,
             pub_logo_path,
             social_media,
-            include_qr
+            include_qr,
+            game_number,
+            game_date
         )
         
         story.extend(card_elements)
@@ -537,6 +628,8 @@ if __name__ == '__main__':
     parser.add_argument('--social_media', default=None, help='Social media URL to encode in QR code')
     parser.add_argument('--include_qr', type=lambda x: x.lower() == 'true', default=False, 
                        help='Whether to include QR code (true/false)')
+    parser.add_argument('--game_number', type=int, default=1, help='Game number (for multiple games)')
+    parser.add_argument('--game_date', default=None, help='Game date (default: today)')
     
     args = parser.parse_args()
     
@@ -545,5 +638,7 @@ if __name__ == '__main__':
         num_players=args.num_players,
         pub_logo=args.pub_logo,
         social_media=args.social_media,
-        include_qr=args.include_qr
+        include_qr=args.include_qr,
+        game_number=args.game_number,
+        game_date=args.game_date
     )
