@@ -20,18 +20,27 @@ from pathlib import Path
 from typing import List, Dict, Set, Optional
 import requests
 from io import BytesIO
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+import tempfile
 
 # ReportLab imports
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfgen import canvas
 
 # QR Code generation
 import qrcode
+
+# PDF Merging
+try:
+    from pypdf import PdfWriter, PdfReader
+except ImportError:
+    from PyPDF2 import PdfWriter, PdfReader
 
 # Configuration
 SCRIPT_DIR = Path(__file__).parent
@@ -191,7 +200,8 @@ def get_logo_with_aspect_ratio(logo_buffer: BytesIO, max_width: float = 40, max_
 
 def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str, 
                      pub_logo_path: str = None, social_media_url: str = None, 
-                     include_qr: bool = False, game_number: int = 1, game_date: str = None) -> List:
+                     include_qr: bool = False, game_number: int = 1, game_date: str = None,
+                     qr_buffer: BytesIO = None) -> List:
     """Create a single bingo card with ReportLab elements"""
     elements = []
     
@@ -421,37 +431,36 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     # --- FOOTER SECTION ---
     footer_elements = []
     
-    # QR Code and social media
-    if social_media_url and include_qr:
-        qr_buffer = generate_qr_code(social_media_url)
-        if qr_buffer:
-            try:
-                # Create footer table with QR and text side by side
-                footer_data = []
-                
-                qr_img = Image(qr_buffer, width=18*mm, height=18*mm)  # Reduced from 20mm
-                
-                social_text_style = ParagraphStyle(
-                    'SocialText',
-                    parent=styles['Normal'],
-                    fontSize=8,  # Reduced from 9
-                    alignment=TA_LEFT,
-                    leftIndent=3*mm,  # Reduced from 5mm
-                    leading=9,  # Reduced from 11
-                )
-                social_text = Paragraph(f"<b>Join Our Social Media To Play &amp; Claim Your Prize!</b><br/>{social_media_url}", social_text_style)
-                
-                footer_data.append([qr_img, social_text])
-                
-                footer_table = Table(footer_data, colWidths=[22*mm, 118*mm])  # Adjusted - more compact
-                footer_table.setStyle(TableStyle([
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-                ]))
-                
-                elements.append(footer_table)
-            except Exception as e:
-                print(f"Error adding QR code: {e}")
+    # QR Code and social media (use cached QR buffer if provided)
+    if social_media_url and include_qr and qr_buffer:
+        try:
+            # Create footer table with QR and text side by side
+            footer_data = []
+            
+            # Reuse the cached QR buffer
+            qr_img = Image(qr_buffer, width=18*mm, height=18*mm)  # Reduced from 20mm
+            
+            social_text_style = ParagraphStyle(
+                'SocialText',
+                parent=styles['Normal'],
+                fontSize=8,  # Reduced from 9
+                alignment=TA_LEFT,
+                leftIndent=3*mm,  # Reduced from 5mm
+                leading=9,  # Reduced from 11
+            )
+            social_text = Paragraph(f"<b>Join Our Social Media To Play &amp; Claim Your Prize!</b><br/>{social_media_url}", social_text_style)
+            
+            footer_data.append([qr_img, social_text])
+            
+            footer_table = Table(footer_data, colWidths=[22*mm, 118*mm])  # Adjusted - more compact
+            footer_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+            ]))
+            
+            elements.append(footer_table)
+        except Exception as e:
+            print(f"Error adding QR code: {e}")
     
     # Card number
     card_style = ParagraphStyle(
@@ -480,10 +489,66 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     return elements
 
 
+def generate_batch_pdf(batch_data):
+    """Generate a PDF batch with 10 cards - runs in parallel"""
+    batch_num, cards_range, selected_songs, venue_name, pub_logo_path, social_media, include_qr, game_number, game_date, qr_buffer_data = batch_data
+    
+    # Create temp file for this batch
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', prefix=f'batch_{batch_num}_')
+    temp_path = temp_file.name
+    temp_file.close()
+    
+    doc = SimpleDocTemplate(
+        temp_path,
+        pagesize=A4,
+        leftMargin=15*mm,
+        rightMargin=15*mm,
+        topMargin=10*mm,
+        bottomMargin=10*mm,
+    )
+    
+    # Reconstruct QR buffer if data provided
+    qr_buffer_cache = None
+    if qr_buffer_data:
+        qr_buffer_cache = BytesIO(qr_buffer_data)
+    
+    story = []
+    for idx, card_num in enumerate(cards_range):
+        # Shuffle songs for this card
+        card_songs = random.sample(selected_songs, SONGS_PER_CARD)
+        
+        # Create card
+        card_elements = create_bingo_card(
+            card_songs,
+            card_num,
+            venue_name,
+            pub_logo_path,
+            social_media,
+            include_qr,
+            game_number,
+            game_date,
+            qr_buffer_cache
+        )
+        
+        story.extend(card_elements)
+        
+        # Add page break after every 2 cards (except for the last card in batch)
+        if (idx + 1) % 2 == 0 and idx < len(cards_range) - 1:
+            story.append(PageBreak())
+        # Add spacer between cards on same page
+        elif idx < len(cards_range) - 1:
+            story.append(Spacer(1, 5*mm))
+    
+    doc.build(story)
+    return temp_path
+
+
 def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
                   pub_logo: str = None, social_media: str = None, include_qr: bool = False,
                   game_number: int = 1, game_date: str = None):
     """Generate all bingo cards"""
+    import time
+    start_time = time.time()
     
     print(f"\n{'='*60}")
     print(f"🎵 MUSIC BINGO CARD GENERATOR (ReportLab)")
@@ -496,16 +561,19 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     print(f"{'='*60}\n")
     
     # Load songs
+    step_start = time.time()
     all_songs = load_pool()
-    print(f"✓ Loaded {len(all_songs)} songs from pool")
+    print(f"✓ Loaded {len(all_songs)} songs from pool ({time.time()-step_start:.2f}s)")
     
     # Calculate optimal songs
+    step_start = time.time()
     optimal_songs = calculate_optimal_songs(num_players)
-    print(f"✓ Using {optimal_songs} songs for {num_players} players")
+    print(f"✓ Using {optimal_songs} songs for {num_players} players ({time.time()-step_start:.3f}s)")
     
     # Shuffle and select songs
+    step_start = time.time()
     selected_songs = random.sample(all_songs, min(optimal_songs, len(all_songs)))
-    print(f"✓ Selected {len(selected_songs)} songs")
+    print(f"✓ Selected {len(selected_songs)} songs ({time.time()-step_start:.3f}s)")
     
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -513,6 +581,7 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     # Load pub logo once (if provided) and save as temp file
     pub_logo_path = None
     if pub_logo:
+        step_start = time.time()
         logo_buffer = download_logo(pub_logo)
         if logo_buffer:
             try:
@@ -539,60 +608,72 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
                 pub_logo_path = temp_logo.name
                 temp_logo.close()
                 
-                print(f"✓ Loaded pub logo")
+                print(f"✓ Loaded pub logo ({time.time()-step_start:.2f}s)")
             except Exception as e:
                 print(f"Error processing logo: {e}")
     
-    # Create PDF
-    print(f"\n📄 Generating PDF cards...")
+    # Generate QR code once (if needed) to avoid regenerating 50 times
+    qr_buffer_cache = None
+    qr_buffer_data = None
+    if include_qr and social_media:
+        step_start = time.time()
+        qr_buffer_cache = generate_qr_code(social_media)
+        if qr_buffer_cache:
+            qr_buffer_data = qr_buffer_cache.getvalue()  # Get bytes for serialization
+            print(f"✓ Generated QR code ({time.time()-step_start:.2f}s)")
     
-    doc = SimpleDocTemplate(
-        str(OUTPUT_FILE),
-        pagesize=A4,  # Portrait for 2 smaller cards vertically
-        leftMargin=15*mm,
-        rightMargin=15*mm,
-        topMargin=10*mm,
-        bottomMargin=10*mm,
-    )
+    # **PARALLEL GENERATION** - Split into batches
+    print(f"\n📄 Generating PDF cards in parallel...")
+    parallel_start = time.time()
     
-    story = []
+    batch_size = 10  # 10 cards per batch
+    num_workers = min(mp.cpu_count() - 1, 5)  # Max 5 workers, leave 1 CPU free
+    print(f"   Using {num_workers} parallel workers")
     
-    # Generate cards (2 per page)
-    for i in range(NUM_CARDS):
-        # Shuffle songs for this card
-        card_songs = random.sample(selected_songs, SONGS_PER_CARD)
-        
-        # Create card with game number and date
-        card_elements = create_bingo_card(
-            card_songs,
-            i + 1,
+    # Prepare batch data
+    batches = []
+    for i in range(0, NUM_CARDS, batch_size):
+        cards_range = list(range(i + 1, min(i + batch_size + 1, NUM_CARDS + 1)))
+        batches.append((
+            i // batch_size,
+            cards_range,
+            selected_songs,
             venue_name,
             pub_logo_path,
             social_media,
             include_qr,
             game_number,
-            game_date
-        )
-        
-        story.extend(card_elements)
-        
-        # Add page break after every 2 cards (except for the last card)
-        if (i + 1) % 2 == 0 and i < NUM_CARDS - 1:
-            from reportlab.platypus import PageBreak
-            story.append(PageBreak())
-        # Add spacer between cards on same page
-        elif i < NUM_CARDS - 1:
-            story.append(Spacer(1, 5*mm))
-        
-        if (i + 1) % 10 == 0:
-            print(f"  ✓ Generated {i + 1}/{NUM_CARDS} cards")
+            game_date,
+            qr_buffer_data
+        ))
     
-    # Build PDF
-    print(f"\n📝 Building PDF document...")
-    print(f"   Total flowables in story: {len(story)}")
-    print(f"   Starting PDF build (this may take a moment)...")
+    # Generate PDFs in parallel
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        temp_pdfs = list(executor.map(generate_batch_pdf, batches))
     
-    doc.build(story)
+    print(f"  ✓ All batches generated ({time.time()-parallel_start:.2f}s)")
+    
+    # Merge all PDFs
+    print(f"\n📝 Merging PDF batches...")
+    merge_start = time.time()
+    
+    merger = PdfWriter()
+    for pdf_path in temp_pdfs:
+        reader = PdfReader(pdf_path)
+        for page in reader.pages:
+            merger.add_page(page)
+    
+    with open(str(OUTPUT_FILE), 'wb') as output_file:
+        merger.write(output_file)
+    
+    print(f"   ✓ PDF merged ({time.time()-merge_start:.2f}s)")
+    
+    # Cleanup temp files
+    for pdf_path in temp_pdfs:
+        try:
+            os.unlink(pdf_path)
+        except:
+            pass
     
     # Cleanup temp logo file
     if pub_logo_path:
@@ -602,6 +683,8 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
         except:
             pass
     
+    total_time = time.time() - start_time
+    
     print(f"\n{'='*60}")
     print(f"✅ SUCCESS!")
     print(f"{'='*60}")
@@ -610,6 +693,7 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
     print(f"Pages: {(NUM_CARDS + 1) // 2} (2 cards per page)")
     print(f"Songs per card: {SONGS_PER_CARD}")
     print(f"Total songs available: {len(selected_songs)}")
+    print(f"⏱️  TOTAL TIME: {total_time:.2f}s")
     print(f"{'='*60}\n")
     
     return {
