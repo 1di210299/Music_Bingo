@@ -9,10 +9,6 @@ services:
       deploy_on_push: true
     
     dockerfile_path: Dockerfile
-    
-    instance_count: 1
-    instance_size_slug: basic-xs
-    
     http_port: 8080
     
     routes:
@@ -21,14 +17,16 @@ services:
     
     envs:
       - key: ELEVENLABS_API_KEY
-        value: ${ELEVENLABS_API_KEY}
+        scope: RUN_TIME
         type: SECRET
       - key: ELEVENLABS_VOICE_ID
+        scope: RUN_TIME
         value: "21m00Tcm4TlvDq8ikWAM"
       - key: VENUE_NAME
+        scope: RUN_TIME
         value: "Music Bingo"
       - key: OPENAI_API_KEY
-        value: ${OPENAI_API_KEY}
+        scope: RUN_TIME
         type: SECRET
 
   - name: frontend
@@ -38,11 +36,7 @@ services:
       deploy_on_push: true
     
     source_dir: frontend
-    
     environment_slug: node-js
-    instance_count: 1
-    instance_size_slug: basic-xs
-    
     http_port: 8080
     
     routes:
@@ -50,5 +44,5 @@ services:
     
     envs:
       - key: BACKEND_URL
-        value: ${backend.PUBLIC_URL}
         scope: RUN_TIME
+        value: ${backend.PUBLIC_URL}
