@@ -52,6 +52,9 @@ app.get('*.html', (req, res) => {
     const injectedHtml = injectBackendUrl(html);
     res.setHeader('Content-Type', 'text/html');
     res.send(injectedHtml);
+  });
+});
+
 // Serve static files AFTER HTML routes (CSS, JS, images, etc)
 app.use(express.static(__dirname, {
   setHeaders: (res, filepath) => {
@@ -59,9 +62,6 @@ app.use(express.static(__dirname, {
     if (filepath.endsWith('.html')) {
       // This shouldn't be reached due to routes above
       res.setHeader('Cache-Control', 'no-cache');
-    }
-  }
-}));  res.setHeader('Cache-Control', 'no-cache');
     }
   }
 }));
