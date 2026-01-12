@@ -12,29 +12,17 @@
  */
 
 // ============================================================================
-// CONFIGURATION - Now loaded from environment variables
+// CONFIGURATION - Now loaded from config.js
 // ============================================================================
+// CONFIG is defined in config.js which is loaded before this file
 
-// For development: Use localhost
-// For production: Will be same origin (backend serves frontend)
-const CONFIG = {
-    // Backend API endpoint
-    API_URL: window.location.origin,  // Same origin as frontend
-    
-    // Game settings
-    PREVIEW_DURATION_MS: 15000,  // 15 seconds of song preview
-    AUTO_NEXT_DELAY_MS: 15000,  // 15 seconds between songs (optional auto-mode)
-    
-    // Audio settings
-    BACKGROUND_MUSIC_VOLUME: 0.15,  // Background music volume (0-1, 15% = subtle)
-    TTS_VOLUME: 1.0,  // TTS announcement volume (0-1, 100% = full)
-    BACKGROUND_MUSIC_URL: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'  // Upbeat background music
-};
-
-// For local development, override if needed
-if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // If frontend is on different port, update this
-    CONFIG.API_URL = 'http://localhost:5001';
+// Extend CONFIG with additional game settings if needed
+if (!CONFIG.PREVIEW_DURATION_MS) CONFIG.PREVIEW_DURATION_MS = 15000;
+if (!CONFIG.AUTO_NEXT_DELAY_MS) CONFIG.AUTO_NEXT_DELAY_MS = 15000;
+if (!CONFIG.BACKGROUND_MUSIC_VOLUME) CONFIG.BACKGROUND_MUSIC_VOLUME = 0.15;
+if (!CONFIG.TTS_VOLUME) CONFIG.TTS_VOLUME = 1.0;
+if (!CONFIG.BACKGROUND_MUSIC_URL) {
+    CONFIG.BACKGROUND_MUSIC_URL = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 }
 
 // ============================================================================

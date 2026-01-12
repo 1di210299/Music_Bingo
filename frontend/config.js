@@ -29,8 +29,13 @@ const CONFIG = {
     VOICE_ID: '21m00Tcm4TlvDq8ikWAM',
     
     // Game settings
-    PREVIEW_DURATION_MS: 5000,
-    AUTO_NEXT_DELAY_MS: 15000,
+    PREVIEW_DURATION_MS: 15000,  // 15 seconds of song preview
+    AUTO_NEXT_DELAY_MS: 15000,   // 15 seconds between songs
+    
+    // Audio settings
+    BACKGROUND_MUSIC_VOLUME: 0.15,  // Background music volume (15%)
+    TTS_VOLUME: 1.0,  // TTS announcement volume (100%)
+    BACKGROUND_MUSIC_URL: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     
     // Data files
     POOL_FILE: '../data/pool.json',
