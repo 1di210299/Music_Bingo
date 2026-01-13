@@ -16,5 +16,7 @@ urlpatterns = [
     path('generate-jingle', views.generate_jingle, name='generate-jingle'),
     path('jingle-tasks/<str:task_id>', views.get_jingle_status, name='jingle-status'),
     path('jingles/<str:filename>', views.download_jingle, name='download-jingle'),
+    path('jingles', views.list_jingles, name='list-jingles'),
     path('generate-music-preview', views.generate_music_preview, name='generate-music-preview'),
+    path('playlist', views.manage_playlist, name='manage-playlist'),
 ]

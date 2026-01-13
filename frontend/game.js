@@ -782,7 +782,10 @@ async function playNextTrack() {
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
         
-        // Step 2: Check for halfway announcement
+        // Step 2: Check for jingle playback
+        await checkAndPlayJingle();
+        
+        // Step 3: Check for halfway announcement
         const totalSongs = gameState.pool.length;
         const songsPlayed = gameState.called.length;
         const halfwayPoint = Math.floor(totalSongs / 2);
@@ -2017,4 +2020,100 @@ function getSocialMediaURL() {
         default:
             return username;
     }
+}
+
+// ============================================================================
+// JINGLE PLAYLIST FUNCTIONALITY
+// ============================================================================
+
+let jinglePlaylist = {
+    jingles: [],
+    enabled: false,
+    interval: 3,
+    currentIndex: 0
+};
+
+/**
+ * Load jingle playlist settings from backend
+ */
+async function loadJinglePlaylist() {
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') ? `${apiUrl}/playlist` : `${apiUrl}/api/playlist`;
+        
+        const response = await fetch(url);
+        const playlist = await response.json();
+        
+        jinglePlaylist = { ...playlist, currentIndex: 0 };
+        
+        if (playlist.enabled && playlist.jingles.length > 0) {
+            console.log(`🎵 Jingle playlist loaded: ${playlist.jingles.length} jingles, play every ${playlist.interval} rounds`);
+        }
+    } catch (error) {
+        console.error('Error loading jingle playlist:', error);
+    }
+}
+
+/**
+ * Check if a jingle should play and play it
+ */
+async function checkAndPlayJingle() {
+    if (!jinglePlaylist.enabled || jinglePlaylist.jingles.length === 0) {
+        return;
+    }
+    
+    const songsPlayed = gameState.called.length;
+    
+    // Play jingle at the specified interval (e.g., every 3 rounds)
+    if (songsPlayed > 0 && songsPlayed % jinglePlaylist.interval === 0) {
+        updateStatus('🎵 Playing jingle...', true);
+        
+        try {
+            const jingleFilename = jinglePlaylist.jingles[jinglePlaylist.currentIndex];
+            await playJingleAudio(jingleFilename);
+            
+            // Move to next jingle (cycle through playlist)
+            jinglePlaylist.currentIndex = (jinglePlaylist.currentIndex + 1) % jinglePlaylist.jingles.length;
+            
+            // Short pause after jingle
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error('Error playing jingle:', error);
+        }
+    }
+}
+
+/**
+ * Play a jingle audio file
+ */
+function playJingleAudio(filename) {
+    return new Promise((resolve, reject) => {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') 
+            ? `${apiUrl}/jingles/${filename}` 
+            : `${apiUrl}/api/jingles/${filename}`;
+        
+        console.log(`🎵 Playing jingle: ${filename}`);
+        
+        const audio = new Audio(url);
+        
+        audio.onended = () => {
+            console.log('✅ Jingle finished');
+            resolve();
+        };
+        
+        audio.onerror = (error) => {
+            console.error('Error playing jingle:', error);
+            reject(error);
+        };
+        
+        audio.play().catch(reject);
+    });
+}
+
+// Load playlist on initialization
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', () => {
+        loadJinglePlaylist();
+    });
 }

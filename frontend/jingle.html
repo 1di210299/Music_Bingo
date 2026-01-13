@@ -399,6 +399,94 @@
             margin-top: 30px;
         }
 
+        /* Jingle Library Styles */
+        .jingle-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+
+        .jingle-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.2);
+        }
+
+        .jingle-item.in-playlist {
+            border-color: #4CAF50;
+            background: #f1f8f4;
+        }
+
+        .jingle-checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .jingle-info {
+            flex: 1;
+        }
+
+        .jingle-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .jingle-metadata {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .jingle-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn.play {
+            background: #667eea;
+            color: white;
+        }
+
+        .icon-btn.play:hover {
+            background: #5568d3;
+        }
+
+        .icon-btn.download {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .icon-btn.download:hover {
+            background: #45a049;
+        }
+
+        .icon-btn.delete {
+            background: #f44336;
+            color: white;
+        }
+
+        .icon-btn.delete:hover {
+            background: #da190b;
+        }
+
         .back-link {
             display: inline-block;
             margin: 20px 0;
@@ -629,6 +717,9 @@
                         <button class="btn btn-secondary" onclick="resetWizard()">
                             🔄 Create Another
                         </button>
+                        <button class="btn btn-primary" onclick="addToPlaylist()">
+                            ➕ Add to Playlist
+                        </button>
                     </div>
                 </div>
             </div>
@@ -638,6 +729,49 @@
                 <button class="btn btn-primary" id="generateBtn" onclick="generateJingle()">
                     ✨ Generate Jingle
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jingle Library & Playlist Manager -->
+    <div class="jingle-container" style="margin-top: 30px;">
+        <div class="jingle-header">
+            <h2>📚 Your Jingle Library & Playlist</h2>
+            <p>Manage your created jingles and set up automatic playback during games</p>
+        </div>
+
+        <div class="form-card">
+            <!-- Playlist Settings -->
+            <div class="playlist-settings" style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                <h3 style="margin-bottom: 15px;">🎵 Playlist Settings</h3>
+                <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="playlistEnabled" onchange="updatePlaylistSettings()">
+                        <span style="font-weight: 600;">Enable automatic jingle playback during games</span>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label for="playlistInterval" style="font-weight: 600;">Play every</label>
+                        <input type="number" id="playlistInterval" min="1" max="10" value="3" 
+                               style="width: 60px; padding: 5px; border: 2px solid #e0e0e0; border-radius: 5px;"
+                               onchange="updatePlaylistSettings()">
+                        <span>rounds</span>
+                    </div>
+                    <button class="btn btn-secondary" onclick="testPlaylist()">
+                        🎵 Test Playlist
+                    </button>
+                </div>
+                <div id="playlistStatus" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+            </div>
+
+            <!-- Jingle Library -->
+            <div class="jingle-library">
+                <h3 style="margin-bottom: 15px;">📁 Your Jingles</h3>
+                <div id="jinglesList" style="display: grid; gap: 15px;">
+                    <!-- Jingles will be loaded here -->
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        Loading jingles...
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -648,4 +648,114 @@ def generate_music_preview(request):
         
     except Exception as e:
         logger.error(f"Error generating music preview: {e}", exc_info=True)
+
+
+@api_view(['GET'])
+def list_jingles(request):
+    """
+    List all generated jingles
+    GET /api/jingles
+    Returns: [{"filename": "...", "created": "...", "size": 12345, "metadata": {...}}, ...]
+    """
+    try:
+        jingles_dir = DATA_DIR / 'jingles'
+        
+        if not jingles_dir.exists():
+            return Response([])
+        
+        jingles = []
+        for file_path in jingles_dir.glob('*.mp3'):
+            # Get file metadata
+            stat = file_path.stat()
+            
+            # Try to load metadata JSON if exists
+            metadata_path = file_path.with_suffix('.json')
+            metadata = {}
+            if metadata_path.exists():
+                try:
+                    with open(metadata_path, 'r') as f:
+                        metadata = json.load(f)
+                except Exception as e:
+                    logger.warning(f"Error loading metadata for {file_path.name}: {e}")
+            
+            jingles.append({
+                'filename': file_path.name,
+                'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                'size': stat.st_size,
+                'metadata': metadata
+            })
+        
+        # Sort by creation time (newest first)
+        jingles.sort(key=lambda x: x['created'], reverse=True)
+        
+        logger.info(f"Listed {len(jingles)} jingles")
+        return Response(jingles)
+        
+    except Exception as e:
+        logger.error(f"Error listing jingles: {e}", exc_info=True)
+        return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET', 'POST'])
+def manage_playlist(request):
+    """
+    Get or update jingle playlist
+    GET /api/playlist - Returns current playlist
+    POST /api/playlist - Update playlist
+    Body: {
+        "jingles": ["file1.mp3", "file2.mp3"],
+        "enabled": true,
+        "interval": 3  // Play jingle every X rounds
+    }
+    """
+    playlist_file = DATA_DIR / 'jingle_playlist.json'
+    
+    if request.method == 'GET':
+        try:
+            if playlist_file.exists():
+                with open(playlist_file, 'r') as f:
+                    playlist = json.load(f)
+            else:
+                playlist = {
+                    'jingles': [],
+                    'enabled': False,
+                    'interval': 3
+                }
+            
+            return Response(playlist)
+            
+        except Exception as e:
+            logger.error(f"Error loading playlist: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+    
+    elif request.method == 'POST':
+        try:
+            data = request.data
+            
+            # Validate jingle files exist
+            jingles_dir = DATA_DIR / 'jingles'
+            validated_jingles = []
+            for filename in data.get('jingles', []):
+                file_path = jingles_dir / filename
+                if file_path.exists():
+                    validated_jingles.append(filename)
+                else:
+                    logger.warning(f"Jingle not found: {filename}")
+            
+            playlist = {
+                'jingles': validated_jingles,
+                'enabled': data.get('enabled', False),
+                'interval': int(data.get('interval', 3))
+            }
+            
+            # Save playlist
+            with open(playlist_file, 'w') as f:
+                json.dump(playlist, f, indent=2)
+            
+            logger.info(f"Playlist updated: {len(validated_jingles)} jingles, enabled={playlist['enabled']}")
+            return Response(playlist)
+            
+        except Exception as e:
+            logger.error(f"Error saving playlist: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
         return Response({'error': str(e)}, status=500)

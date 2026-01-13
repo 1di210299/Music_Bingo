@@ -505,6 +505,12 @@ function updateProgress(percentage, step) {
 function showCompletedJingle(result) {
     console.log('Jingle result:', result);
     
+    // Save current jingle filename for "Add to Playlist" button
+    if (result.audio_url) {
+        const urlParts = result.audio_url.split('/');
+        currentJingleFilename = urlParts[urlParts.length - 1];
+    }
+    
     // Hide progress, show player
     document.getElementById('progressSection').classList.remove('active');
     document.getElementById('audioPlayer').classList.remove('hidden');
@@ -529,6 +535,9 @@ function showCompletedJingle(result) {
     audio.play().catch(err => {
         console.warn('Auto-play blocked:', err);
     });
+    
+    // Refresh jingles library
+    setTimeout(() => loadJinglesLibrary(), 1000);
 }
 
 function showError(message) {
@@ -544,3 +553,241 @@ function showError(message) {
 // ============================================================================
 
 console.log('✅ Jingle.js loaded successfully');
+
+// ============================================================================
+// PLAYLIST MANAGEMENT
+// ============================================================================
+
+let playlistState = {
+    jingles: [],
+    enabled: false,
+    interval: 3
+};
+
+let currentJingleFilename = null; // Store last generated jingle
+
+// Load jingles library on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadJinglesLibrary();
+    loadPlaylistSettings();
+});
+
+async function loadJinglesLibrary() {
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') ? `${apiUrl}/jingles` : `${apiUrl}/api/jingles`;
+        
+        const response = await fetch(url);
+        const jingles = await response.json();
+        
+        displayJingles(jingles);
+    } catch (error) {
+        console.error('Error loading jingles:', error);
+        document.getElementById('jinglesList').innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #f44336;">
+                Failed to load jingles
+            </div>
+        `;
+    }
+}
+
+function displayJingles(jingles) {
+    const container = document.getElementById('jinglesList');
+    
+    if (jingles.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #999;">
+                No jingles yet. Create your first one above! 👆
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = jingles.map(jingle => {
+        const inPlaylist = playlistState.jingles.includes(jingle.filename);
+        const metadata = jingle.metadata || {};
+        const created = new Date(jingle.created).toLocaleString();
+        const sizeKB = (jingle.size / 1024).toFixed(1);
+        
+        return `
+            <div class="jingle-item ${inPlaylist ? 'in-playlist' : ''}" data-filename="${jingle.filename}">
+                <input type="checkbox" 
+                       class="jingle-checkbox" 
+                       ${inPlaylist ? 'checked' : ''}
+                       onchange="toggleJingleInPlaylist('${jingle.filename}')">
+                <div class="jingle-info">
+                    <div class="jingle-title">
+                        ${metadata.text ? metadata.text.substring(0, 50) + '...' : jingle.filename}
+                    </div>
+                    <div class="jingle-metadata">
+                        Voice: ${metadata.voiceName || 'Unknown'} | 
+                        Music: ${metadata.musicStyle || 'Unknown'} | 
+                        ${sizeKB} KB | 
+                        ${created}
+                    </div>
+                </div>
+                <div class="jingle-actions">
+                    <button class="icon-btn play" onclick="playJingle('${jingle.filename}')" title="Play">
+                        ▶️
+                    </button>
+                    <button class="icon-btn download" onclick="downloadJingle('${jingle.filename}')" title="Download">
+                        ⬇️
+                    </button>
+                    <button class="icon-btn delete" onclick="deleteJingle('${jingle.filename}')" title="Delete">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadPlaylistSettings() {
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') ? `${apiUrl}/playlist` : `${apiUrl}/api/playlist`;
+        
+        const response = await fetch(url);
+        const playlist = await response.json();
+        
+        playlistState = playlist;
+        
+        document.getElementById('playlistEnabled').checked = playlist.enabled;
+        document.getElementById('playlistInterval').value = playlist.interval;
+        
+        updatePlaylistStatus();
+    } catch (error) {
+        console.error('Error loading playlist:', error);
+    }
+}
+
+async function updatePlaylistSettings() {
+    const enabled = document.getElementById('playlistEnabled').checked;
+    const interval = parseInt(document.getElementById('playlistInterval').value);
+    
+    playlistState.enabled = enabled;
+    playlistState.interval = interval;
+    
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') ? `${apiUrl}/playlist` : `${apiUrl}/api/playlist`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(playlistState)
+        });
+        
+        const result = await response.json();
+        console.log('Playlist updated:', result);
+        
+        updatePlaylistStatus();
+    } catch (error) {
+        console.error('Error updating playlist:', error);
+        alert('Failed to update playlist settings');
+    }
+}
+
+function updatePlaylistStatus() {
+    const statusDiv = document.getElementById('playlistStatus');
+    
+    if (playlistState.enabled && playlistState.jingles.length > 0) {
+        statusDiv.innerHTML = `
+            ✅ <strong>Active:</strong> ${playlistState.jingles.length} jingles will play every ${playlistState.interval} rounds
+        `;
+        statusDiv.style.color = '#4CAF50';
+    } else if (playlistState.enabled) {
+        statusDiv.innerHTML = `
+            ⚠️ <strong>Warning:</strong> Playlist is enabled but no jingles selected
+        `;
+        statusDiv.style.color = '#ff9800';
+    } else {
+        statusDiv.innerHTML = `
+            ⏸️ Playlist disabled
+        `;
+        statusDiv.style.color = '#999';
+    }
+}
+
+async function toggleJingleInPlaylist(filename) {
+    const index = playlistState.jingles.indexOf(filename);
+    
+    if (index > -1) {
+        playlistState.jingles.splice(index, 1);
+    } else {
+        playlistState.jingles.push(filename);
+    }
+    
+    await updatePlaylistSettings();
+    await loadJinglesLibrary(); // Refresh display
+}
+
+function addToPlaylist() {
+    if (!currentJingleFilename) {
+        alert('No jingle to add. Please generate a jingle first.');
+        return;
+    }
+    
+    if (!playlistState.jingles.includes(currentJingleFilename)) {
+        playlistState.jingles.push(currentJingleFilename);
+        updatePlaylistSettings();
+        loadJinglesLibrary();
+        alert('✅ Jingle added to playlist!');
+    } else {
+        alert('This jingle is already in the playlist.');
+    }
+}
+
+let audioPreview = null;
+
+function playJingle(filename) {
+    const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+    const url = apiUrl.endsWith('/api') 
+        ? `${apiUrl}/jingles/${filename}` 
+        : `${apiUrl}/api/jingles/${filename}`;
+    
+    if (audioPreview) {
+        audioPreview.pause();
+    }
+    
+    audioPreview = new Audio(url);
+    audioPreview.play().catch(err => {
+        console.error('Playback error:', err);
+        alert('Failed to play jingle');
+    });
+}
+
+function downloadJingle(filename) {
+    const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+    const url = apiUrl.endsWith('/api') 
+        ? `${apiUrl}/jingles/${filename}` 
+        : `${apiUrl}/api/jingles/${filename}`;
+    
+    window.open(url, '_blank');
+}
+
+async function deleteJingle(filename) {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+        return;
+    }
+    
+    // Note: No delete endpoint implemented yet - just remove from playlist
+    const index = playlistState.jingles.indexOf(filename);
+    if (index > -1) {
+        playlistState.jingles.splice(index, 1);
+        await updatePlaylistSettings();
+    }
+    
+    alert('Note: File deletion not implemented. Removed from playlist only.');
+}
+
+function testPlaylist() {
+    if (playlistState.jingles.length === 0) {
+        alert('No jingles in playlist. Add some jingles first!');
+        return;
+    }
+    
+    // Play first jingle in playlist
+    playJingle(playlistState.jingles[0]);
+    alert(`Testing playlist: Playing ${playlistState.jingles[0]}\n\nPlaylist has ${playlistState.jingles.length} jingles total.`);
+}
