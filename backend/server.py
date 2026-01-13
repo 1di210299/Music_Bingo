@@ -75,6 +75,17 @@ def get_pool():
     try:
         import json
         pool_path = os.path.join(DATA_DIR, 'pool.json')
+        
+        # Debug logging
+        print(f"[DEBUG] BASE_DIR: {BASE_DIR}")
+        print(f"[DEBUG] DATA_DIR: {DATA_DIR}")
+        print(f"[DEBUG] pool_path: {pool_path}")
+        print(f"[DEBUG] File exists: {os.path.exists(pool_path)}")
+        if os.path.exists(BASE_DIR):
+            print(f"[DEBUG] Contents of BASE_DIR: {os.listdir(BASE_DIR)}")
+        if os.path.exists(DATA_DIR):
+            print(f"[DEBUG] Contents of DATA_DIR: {os.listdir(DATA_DIR)}")
+        
         with open(pool_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         return jsonify(data)
