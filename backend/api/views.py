@@ -67,8 +67,14 @@ def generate_cards_async(request):
         data = request.data
         venue_name = data.get('venue_name', 'Music Bingo')
         num_players = data.get('num_players', 25)
+        pub_logo = data.get('pub_logo')
+        social_media = data.get('social_media')
+        include_qr = data.get('include_qr', False)
+        game_number = data.get('game_number', 1)
+        game_date = data.get('game_date')
         
         logger.info(f"Starting async card generation: {num_players} cards for '{venue_name}'")
+        logger.info(f"  pub_logo: {pub_logo}, social_media: {social_media}, include_qr: {include_qr}")
         
         task_id = str(uuid.uuid4())
         
@@ -85,7 +91,33 @@ def generate_cards_async(request):
                 tasks_storage[task_id]['status'] = 'processing'
                 
                 script_path = BASE_DIR / 'generate_cards.py'
-                cmd = ['python3', str(script_path), '--venue_name', venue_name, '--num_players', str(num_players)]
+                cmd = [
+                    'python3', str(script_path),
+                    '--venue_name', venue_name,
+                    '--num_players', str(num_players),
+                    '--game_number', str(game_number)
+                ]
+                
+                if game_date:
+                    cmd.extend(['--game_date', game_date])
+                
+                if pub_logo:
+                    # Convert relative URL to absolute path
+                    if pub_logo.startswith('/data/'):
+                        logo_path = str(BASE_DIR / pub_logo[1:])  # Remove leading /
+                        cmd.extend(['--pub_logo', logo_path])
+                        logger.info(f"Task {task_id}: Using pub logo: {logo_path}")
+                    elif pub_logo.startswith('http'):
+                        cmd.extend(['--pub_logo', pub_logo])
+                        logger.info(f"Task {task_id}: Using pub logo URL: {pub_logo}")
+                
+                if social_media:
+                    cmd.extend(['--social_media', social_media])
+                    logger.info(f"Task {task_id}: Adding social media QR: {social_media}")
+                
+                if include_qr:
+                    cmd.extend(['--include_qr', 'true'])
+                    logger.info(f"Task {task_id}: QR code enabled")
                 
                 logger.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
                 result = subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=180)
