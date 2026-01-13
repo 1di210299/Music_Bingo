@@ -31,6 +31,7 @@ services:
     
     dockerfile_path: Dockerfile
     http_port: 8080
+    instance_size_slug: professional-xs  # 1GB RAM, 1 vCPU - faster PDF generation
     
     envs:
       - key: ELEVENLABS_API_KEY
@@ -55,6 +56,7 @@ services:
     source_dir: frontend
     environment_slug: node-js
     http_port: 8080
+    instance_size_slug: basic-xxs  # Frontend doesn't need much, keep it small
     
     envs:
       - key: BACKEND_URL

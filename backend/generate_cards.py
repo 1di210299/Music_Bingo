@@ -49,7 +49,7 @@ PROJECT_ROOT = SCRIPT_DIR
 INPUT_POOL = PROJECT_ROOT / "data" / "pool.json"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "cards"
 OUTPUT_FILE = OUTPUT_DIR / "music_bingo_cards.pdf"
-NUM_CARDS = 30  # Reduced from 50 to 30 for faster generation in App Platform
+NUM_CARDS = 50  # Back to 50 with Professional XS resources
 GRID_SIZE = 5  # 5x5 bingo
 SONGS_PER_CARD = 24  # 25 cells - 1 FREE
 
@@ -631,14 +631,11 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
             print(f"✓ Generated QR code ({time.time()-step_start:.2f}s)")
     
     # Check if parallel processing is beneficial
-    # Disable in Docker/App Platform due to limited resources
+    # Enable with Professional XS or higher (1GB+ RAM)
     num_cpus = mp.cpu_count()
-    is_docker = os.path.exists('/.dockerenv') or os.path.exists('/app/.dockerenv')
-    use_parallel = num_cpus >= 2 and not is_docker
+    use_parallel = num_cpus >= 2  # Re-enabled with upgraded resources
     
-    if is_docker:
-        print(f"\n📄 Generating PDF cards (Docker mode - sequential for stability)...")
-    elif use_parallel:
+    if use_parallel:
         # **PARALLEL GENERATION** - Split into batches
         print(f"\n📄 Generating PDF cards in parallel...")
         parallel_start = time.time()
