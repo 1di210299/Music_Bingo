@@ -14,7 +14,7 @@ dist/
 build/
 
 # Data files (regenerate these)
-data/pool.json
+# data/pool.json - NEEDED for production, don't ignore
 data/cards/*.pdf
 data/logos/*.png
 data/logos/*.jpg

@@ -249,7 +249,7 @@ def upload_logo(request):
                 destination.write(chunk)
         
         logo_url = f'/data/logos/{safe_filename}'
-        logger.info(f"File saved successfully: {logo_url}")
+        logger.info(f"File saved successfully: {file_path}, URL: {logo_url}")
         
         return Response({
             'success': True,
