@@ -1298,7 +1298,7 @@ function resetSetup() {
  * Reset game to start over
  */
 function resetGame() {
-    if (!confirm('Reset game? This will clear all called songs.')) {
+    if (!confirm('Reset game? This will clear all settings and return to setup.')) {
         return;
     }
     
@@ -1333,9 +1333,12 @@ function resetGame() {
     `;
     
     updateStats();
-    updateStatus('✅ Game reset! Ready to start.', false);
+    updateStatus('✅ Game reset! Configure your settings.', false);
     
-    console.log('🔄 Game reset');
+    console.log('🔄 Game reset - returning to setup');
+    
+    // Show setup modal again
+    showSetupModal();
 }
 
 // ============================================================================
