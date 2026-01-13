@@ -54,11 +54,13 @@ NUM_CARDS = 50  # Back to 50 with Professional XS resources
 GRID_SIZE = 5  # 5x5 bingo
 SONGS_PER_CARD = 24  # 25 cells - 1 FREE
 
-# Perfect DJ Branding - Check multiple possible locations
+# Perfect DJ Branding - Check multiple possible locations (PDF version)
 PERFECT_DJ_LOGO_PATHS = [
-    PROJECT_ROOT / "frontend" / "assets" / "perfect-dj-logo.png",  # Local dev
-    PROJECT_ROOT / "assets" / "perfect-dj-logo.png",  # Docker if copied
-    Path("/app/frontend/assets/perfect-dj-logo.png"),  # Docker absolute
+    PROJECT_ROOT / "frontend" / "assets" / "perfect-dj-logo-pdf.png",  # Local dev (PDF version)
+    PROJECT_ROOT / "frontend" / "assets" / "perfect-dj-logo.png",      # Fallback
+    PROJECT_ROOT / "assets" / "perfect-dj-logo.png",                   # Docker if copied
+    Path("/app/frontend/assets/perfect-dj-logo-pdf.png"),             # Docker absolute
+    Path("/app/frontend/assets/perfect-dj-logo.png"),                 # Docker fallback
 ]
 WEBSITE_URL = "www.perfectdj.co.uk"
 
@@ -220,7 +222,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         'CustomHeader',
         parent=styles['Heading1'],
         fontSize=18,  # Reduced from 24 to 18 to save space
-        textColor=colors.HexColor('#667eea'),
+        textColor=colors.black,  # Black for B&W printing
         alignment=TA_CENTER,
         spaceAfter=2*mm,  # Reduced from 3mm to 2mm
         fontName='Helvetica-Bold',
@@ -481,7 +483,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         'CardNumber',
         parent=styles['Normal'],
         fontSize=7,
-        textColor=colors.HexColor('#667eea'),
+        textColor=colors.black,  # Black for B&W printing
         alignment=TA_CENTER,
     )
     card_text = Paragraph(f"<b>Card #{card_num}</b>", card_style)
