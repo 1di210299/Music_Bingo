@@ -44,7 +44,8 @@ except ImportError:
 
 # Configuration
 SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+# In Docker, everything is in /app/, so no need to go to parent
+PROJECT_ROOT = SCRIPT_DIR
 INPUT_POOL = PROJECT_ROOT / "data" / "pool.json"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "cards"
 OUTPUT_FILE = OUTPUT_DIR / "music_bingo_cards.pdf"
