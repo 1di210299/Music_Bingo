@@ -159,11 +159,18 @@ function initializeTemplates() {
 // VOICE SELECTION
 // ============================================================================
 
+let currentTestAudio = null;
+
 function initializeVoiceSelection() {
     const voiceCards = document.querySelectorAll('.voice-card');
     
     voiceCards.forEach(card => {
-        card.addEventListener('click', () => {
+        card.addEventListener('click', (e) => {
+            // Don't select if clicking the test button
+            if (e.target.classList.contains('test-voice-btn')) {
+                return;
+            }
+            
             // Remove selected from all cards
             voiceCards.forEach(c => c.classList.remove('selected'));
             
@@ -175,6 +182,91 @@ function initializeVoiceSelection() {
             console.log('Voice selected:', jingleData.voiceId);
         });
     });
+}
+
+async function testVoice(event, voiceId, voiceName) {
+    event.stopPropagation(); // Prevent card selection
+    
+    const btn = event.target;
+    
+    // Stop any currently playing audio
+    if (currentTestAudio && !currentTestAudio.paused) {
+        currentTestAudio.pause();
+        currentTestAudio = null;
+        // Reset all buttons
+        document.querySelectorAll('.test-voice-btn').forEach(b => {
+            b.textContent = '🔊 Test Voice';
+            b.classList.remove('playing');
+            b.disabled = false;
+        });
+        return;
+    }
+    
+    try {
+        // Disable all test buttons
+        document.querySelectorAll('.test-voice-btn').forEach(b => b.disabled = true);
+        
+        btn.textContent = '⏳ Loading...';
+        btn.classList.add('playing');
+        
+        // Generate sample text
+        const sampleText = `Hello! This is the ${voiceName} voice. Perfect for your pub jingles and promotions.`;
+        
+        // Call TTS API
+        const apiUrl = CONFIG.API_URL || 'http://localhost:8080/api';
+        const response = await fetch(`${apiUrl}/generate-tts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: sampleText,
+                voice_id: voiceId
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to generate voice sample');
+        }
+        
+        // Get audio blob
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // Play audio
+        currentTestAudio = new Audio(audioUrl);
+        btn.textContent = '⏸️ Stop';
+        
+        currentTestAudio.play();
+        
+        currentTestAudio.addEventListener('ended', () => {
+            btn.textContent = '🔊 Test Voice';
+            btn.classList.remove('playing');
+            document.querySelectorAll('.test-voice-btn').forEach(b => b.disabled = false);
+            URL.revokeObjectURL(audioUrl);
+            currentTestAudio = null;
+        });
+        
+        currentTestAudio.addEventListener('error', () => {
+            btn.textContent = '🔊 Test Voice';
+            btn.classList.remove('playing');
+            document.querySelectorAll('.test-voice-btn').forEach(b => b.disabled = false);
+            alert('Error playing audio sample');
+            currentTestAudio = null;
+        });
+        
+        // Enable other buttons
+        document.querySelectorAll('.test-voice-btn').forEach(b => {
+            if (b !== btn) b.disabled = false;
+        });
+        
+    } catch (error) {
+        console.error('Error testing voice:', error);
+        btn.textContent = '🔊 Test Voice';
+        btn.classList.remove('playing');
+        document.querySelectorAll('.test-voice-btn').forEach(b => b.disabled = false);
+        alert('Failed to generate voice sample. Please check your API key.');
+    }
 }
 
 // ============================================================================

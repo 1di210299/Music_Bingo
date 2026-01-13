@@ -186,6 +186,7 @@
             cursor: pointer;
             transition: all 0.3s;
             text-align: center;
+            position: relative;
         }
 
         .voice-card:hover {
@@ -206,6 +207,34 @@
         .voice-desc {
             font-size: 0.85em;
             color: #666;
+            margin-bottom: 10px;
+        }
+
+        .test-voice-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .test-voice-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(102,126,234,0.4);
+        }
+
+        .test-voice-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .test-voice-btn.playing {
+            background: #4CAF50;
         }
 
         .music-styles {
@@ -436,14 +465,23 @@
                     <div class="voice-card selected" data-voice="21m00Tcm4TlvDq8ikWAM">
                         <div class="voice-name">British Male</div>
                         <div class="voice-desc">Professional & Clear</div>
+                        <button class="test-voice-btn" onclick="testVoice(event, '21m00Tcm4TlvDq8ikWAM', 'British Male')">
+                            🔊 Test Voice
+                        </button>
                     </div>
                     <div class="voice-card" data-voice="EXAVITQu4vr4xnSDxMaL">
                         <div class="voice-name">British Female</div>
                         <div class="voice-desc">Friendly & Warm</div>
+                        <button class="test-voice-btn" onclick="testVoice(event, 'EXAVITQu4vr4xnSDxMaL', 'British Female')">
+                            🔊 Test Voice
+                        </button>
                     </div>
                     <div class="voice-card" data-voice="pNInz6obpgDQGcFmaJgB">
                         <div class="voice-name">Energetic</div>
                         <div class="voice-desc">Upbeat & Fun</div>
+                        <button class="test-voice-btn" onclick="testVoice(event, 'pNInz6obpgDQGcFmaJgB', 'Energetic')">
+                            🔊 Test Voice
+                        </button>
                     </div>
                 </div>
             </div>
