@@ -29,15 +29,17 @@ ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
 VENUE_NAME = os.getenv('VENUE_NAME', 'this venue')
 
 # Paths
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE_DIR / 'data'
-FRONTEND_DIR = BASE_DIR.parent / 'frontend'
+BASE_DIR = Path(__file__).resolve().parent.parent  # /app/backend/
+APP_ROOT = BASE_DIR.parent  # /app/
+DATA_DIR = APP_ROOT / 'data'
+FRONTEND_DIR = APP_ROOT / 'frontend'
 
 # In-memory task storage (works with 1 gunicorn worker)
 tasks_storage = {}
 
 @api_view(['GET'])
 def health_check(request):
+    logger.info("Health check endpoint called")
     return Response({'status': 'healthy', 'message': 'Music Bingo API (Django)'})
 
 @api_view(['GET'])
@@ -60,6 +62,8 @@ def generate_cards_async(request):
         venue_name = data.get('venue_name', 'Music Bingo')
         num_players = data.get('num_players', 25)
         
+        logger.info(f"Starting async card generation: {num_players} cards for '{venue_name}'")
+        
         task_id = str(uuid.uuid4())
         
         tasks_storage[task_id] = {
@@ -71,24 +75,29 @@ def generate_cards_async(request):
         
         def background_task():
             try:
+                logger.info(f"Task {task_id}: Processing started")
                 tasks_storage[task_id]['status'] = 'processing'
                 
                 script_path = BASE_DIR / 'generate_cards.py'
                 cmd = ['python3', str(script_path), '--venue_name', venue_name, '--num_players', str(num_players)]
                 
-                result = subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=180)
+                logger.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
+                result = subprocess.run(cmd, cwd=str(APP_ROOT), capture_output=True, text=True, timeout=180)
                 
                 if result.returncode != 0:
+                    logger.error(f"Task {task_id}: Failed with error: {result.stderr}")
                     tasks_storage[task_id]['status'] = 'failed'
                     tasks_storage[task_id]['error'] = result.stderr
                     return
                 
+                logger.info(f"Task {task_id}: Completed successfully")
                 tasks_storage[task_id]['status'] = 'completed'
                 tasks_storage[task_id]['result'] = {
                     'success': True,
                     'download_url': '/data/cards/music_bingo_cards.pdf'
                 }
             except Exception as e:
+                logger.error(f"Task {task_id}: Exception: {str(e)}")
                 tasks_storage[task_id]['status'] = 'failed'
                 tasks_storage[task_id]['error'] = str(e)
         
