@@ -28,22 +28,12 @@ ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
 ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
 VENUE_NAME = os.getenv('VENUE_NAME', 'this venue')
 
-# Paths
-BASE_DIR = Path(__file__).resolve().parent.parent  # /app/backend/ or /app/api/..
-# In Docker: /app/api/__file__ -> parent = /app/api/ -> parent = /app/
-# So APP_ROOT should be /app/ where data/ and frontend/ are
-if (BASE_DIR / 'data').exists():
-    APP_ROOT = BASE_DIR
-elif (BASE_DIR.parent / 'data').exists():
-    APP_ROOT = BASE_DIR.parent
-else:
-    # Fallback: assume /app as root
-    APP_ROOT = Path('/app')
-
-DATA_DIR = APP_ROOT / 'data'
-FRONTEND_DIR = APP_ROOT / 'frontend'
-
-logger.info(f"Paths configured - BASE_DIR: {BASE_DIR}, APP_ROOT: {APP_ROOT}, DATA_DIR: {DATA_DIR}")
+# Paths - Fix for Docker container structure
+# Docker WORKDIR is /app, files are copied as: COPY backend/ . COPY data/ ./data/
+# So from /app/api/views.py we need to go to /app/data/
+BASE_DIR = Path(__file__).resolve().parent.parent  # /app/api -> /app
+DATA_DIR = BASE_DIR / 'data'  # /app/data
+FRONTEND_DIR = BASE_DIR / 'frontend'  # /app/frontend
 
 # In-memory task storage (works with 1 gunicorn worker)
 tasks_storage = {}
@@ -98,7 +88,7 @@ def generate_cards_async(request):
                 cmd = ['python3', str(script_path), '--venue_name', venue_name, '--num_players', str(num_players)]
                 
                 logger.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
-                result = subprocess.run(cmd, cwd=str(APP_ROOT), capture_output=True, text=True, timeout=180)
+                result = subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True, timeout=180)
                 
                 if result.returncode != 0:
                     logger.error(f"Task {task_id}: Failed with error: {result.stderr}")
