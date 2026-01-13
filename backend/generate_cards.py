@@ -49,7 +49,7 @@ PROJECT_ROOT = SCRIPT_DIR
 INPUT_POOL = PROJECT_ROOT / "data" / "pool.json"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "cards"
 OUTPUT_FILE = OUTPUT_DIR / "music_bingo_cards.pdf"
-NUM_CARDS = 50
+NUM_CARDS = 30  # Reduced from 50 to 30 for faster generation in App Platform
 GRID_SIZE = 5  # 5x5 bingo
 SONGS_PER_CARD = 24  # 25 cells - 1 FREE
 
@@ -630,11 +630,15 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
             qr_buffer_data = qr_buffer_cache.getvalue()  # Get bytes for serialization
             print(f"✓ Generated QR code ({time.time()-step_start:.2f}s)")
     
-    # Check if parallel processing is beneficial (needs 2+ CPUs)
+    # Check if parallel processing is beneficial
+    # Disable in Docker/App Platform due to limited resources
     num_cpus = mp.cpu_count()
-    use_parallel = num_cpus >= 2
+    is_docker = os.path.exists('/.dockerenv') or os.path.exists('/app/.dockerenv')
+    use_parallel = num_cpus >= 2 and not is_docker
     
-    if use_parallel:
+    if is_docker:
+        print(f"\n📄 Generating PDF cards (Docker mode - sequential for stability)...")
+    elif use_parallel:
         # **PARALLEL GENERATION** - Split into batches
         print(f"\n📄 Generating PDF cards in parallel...")
         parallel_start = time.time()
@@ -695,10 +699,10 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
         doc = SimpleDocTemplate(
             str(OUTPUT_FILE),
             pagesize=A4,
-            leftMargin=15*mm,
-            rightMargin=15*mm,
-            topMargin=10*mm,
-            bottomMargin=10*mm,
+            leftMargin=10*mm,  # Same as batch mode
+            rightMargin=10*mm,
+            topMargin=8*mm,
+            bottomMargin=8*mm,
         )
         
         story = []
