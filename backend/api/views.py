@@ -236,7 +236,7 @@ def upload_logo(request):
         
         logos_dir = DATA_DIR / 'logos'
         logger.info(f"Creating logos dir: {logos_dir}")
-        logos_dir.mkdir(exist_ok=True)
+        logos_dir.mkdir(parents=True, exist_ok=True)
         
         timestamp = int(time.time())
         safe_filename = f'pub_logo_{timestamp}.{file_ext}'
