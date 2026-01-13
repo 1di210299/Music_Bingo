@@ -631,18 +631,19 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
             print(f"✓ Generated QR code ({time.time()-step_start:.2f}s)")
     
     # Check if parallel processing is beneficial
-    # Enable with Professional XS or higher (1GB+ RAM)
+    # OPTIMIZED: Use ALL available cores for maximum speed
     num_cpus = mp.cpu_count()
-    use_parallel = num_cpus >= 2  # Re-enabled with upgraded resources
+    use_parallel = True  # Always use parallel - it's 4-8x faster
     
     if use_parallel:
-        # **PARALLEL GENERATION** - Split into batches
-        print(f"\n📄 Generating PDF cards in parallel...")
+        # **PARALLEL GENERATION** - OPTIMIZED for maximum speed
+        print(f"\n📄 Generating PDF cards in parallel (OPTIMIZED)...")
         parallel_start = time.time()
         
         batch_size = 10  # 10 cards per batch
-        num_workers = max(1, min(num_cpus - 1, 5))  # Min 1, Max 5 workers
-        print(f"   Using {num_workers} parallel workers (CPUs: {num_cpus})")
+        # OPTIMIZATION: Use max cores available (minus 1 for system)
+        num_workers = max(4, num_cpus - 1)  # Minimum 4 workers, use all available cores
+        print(f"   Using {num_workers} parallel workers (CPUs: {num_cpus}) - MAXIMUM SPEED MODE")
         
         # Prepare batch data
         batches = []

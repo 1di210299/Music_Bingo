@@ -1687,14 +1687,14 @@ async function generateCards() {
     // Show loading state
     const btn = event.target;
     const originalText = btn.textContent;
-    btn.textContent = '⏳ Generating...';
+    btn.textContent = '⏳ Starting generation...';
     btn.disabled = true;
     
     try {
         // Get branding data from localStorage
         let pubLogo = localStorage.getItem('pubLogo') || '';
         
-        console.log('📋 Preparing to generate cards...');
+        console.log('📋 Preparing to generate cards (ASYNC MODE)...');
         console.log('   Venue:', venueName);
         console.log('   Players:', numPlayers);
         console.log('   Pub Logo (stored):', pubLogo);
@@ -1710,9 +1710,10 @@ async function generateCards() {
         
         console.log('   Social Media:', socialMedia);
         console.log('   Include QR:', includeQR);
-        console.log('📤 Sending request to backend...');
+        console.log('📤 Sending async request to backend...');
         
-        const response = await fetch(`${CONFIG.API_URL}/api/generate-cards`, {
+        // Use new async endpoint
+        const response = await fetch(`${CONFIG.API_URL}/api/generate-cards-async`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1732,26 +1733,94 @@ async function generateCards() {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ Backend error:', errorText);
-            throw new Error('Failed to generate cards');
+            throw new Error('Failed to start card generation');
         }
         
         const result = await response.json();
-        console.log('✅ Backend response:', result);
+        console.log('✅ Task started:', result);
         
-        // Show success message with game info
-        alert(`✅ Cards generated successfully!\n\nVenue: ${venueName}\nPlayers: ${numPlayers}\nOptimal songs: ${optimalSongs}\nEstimated duration: ${estimatedMinutes} minutes\n\nCards: ${result.num_cards}\nFile size: ${result.file_size_mb}MB\n\nDownloading now...`);
+        const taskId = result.task_id;
         
-        // Download the PDF automatically with timestamp to force fresh download
-        const timestamp = new Date().getTime();
-        const link = document.createElement('a');
-        link.href = `${CONFIG.API_URL}/data/cards/music_bingo_cards.pdf?t=${timestamp}`;
-        link.download = `music_bingo_${venueName.replace(/\s+/g, '_')}_${numPlayers}players.pdf`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        console.log('📥 Downloading PDF from:', link.href);
-        link.click();
-        document.body.removeChild(link);
-        console.log('✅ PDF download triggered');
+        // Show progress message
+        btn.textContent = '⏳ Generating cards...';
+        
+        // Poll for status
+        let attempts = 0;
+        const maxAttempts = 120; // 4 minutes max (2 seconds per poll)
+        
+        const checkStatus = async () => {
+            attempts++;
+            
+            try {
+                const statusResponse = await fetch(`${CONFIG.API_URL}/api/tasks/${taskId}`);
+                
+                if (!statusResponse.ok) {
+                    throw new Error('Failed to check status');
+                }
+                
+                const status = await statusResponse.json();
+                console.log(`📊 Status check #${attempts}:`, status.status, `(${status.elapsed_time}s)`);
+                
+                if (status.status === 'completed') {
+                    // Success!
+                    console.log('✅ Generation completed:', status.result);
+                    
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    
+                    // Show success message
+                    alert(`✅ Cards generated successfully!\n\nVenue: ${venueName}\nPlayers: ${numPlayers}\nOptimal songs: ${optimalSongs}\nEstimated duration: ${estimatedMinutes} minutes\n\nCards: ${status.result.num_cards}\nFile size: ${status.result.file_size_mb}MB\nGeneration time: ${status.result.generation_time}s\n\nDownloading now...`);
+                    
+                    // Download the PDF automatically
+                    const timestamp = new Date().getTime();
+                    const link = document.createElement('a');
+                    link.href = `${CONFIG.API_URL}${status.result.download_url}?t=${timestamp}`;
+                    link.download = `music_bingo_${venueName.replace(/\s+/g, '_')}_${numPlayers}players.pdf`;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                } else if (status.status === 'failed') {
+                    // Failed
+                    console.error('❌ Generation failed:', status.error);
+                    
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    
+                    alert(`❌ Card generation failed:\n\n${status.error}\n\nPlease try again or contact support.`);
+                    
+                } else if (attempts >= maxAttempts) {
+                    // Timeout
+                    console.error('⏱️ Polling timeout');
+                    
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    
+                    alert('⏱️ Card generation is taking longer than expected.\n\nThe task may still complete in the background.\nPlease check back in a few minutes.');
+                    
+                } else {
+                    // Still processing, check again
+                    btn.textContent = `⏳ Generating... (${Math.round(status.elapsed_time)}s)`;
+                    setTimeout(checkStatus, 2000); // Poll every 2 seconds
+                }
+                
+            } catch (error) {
+                console.error('Error checking status:', error);
+                
+                if (attempts >= maxAttempts) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    alert('Failed to check generation status. Please try again.');
+                } else {
+                    // Retry
+                    setTimeout(checkStatus, 2000);
+                }
+            }
+        };
+        
+        // Start polling
+        setTimeout(checkStatus, 2000); // First check after 2 seconds
         
     } catch (error) {
         console.error('❌ Error generating cards:', error);
