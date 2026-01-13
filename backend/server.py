@@ -5,6 +5,7 @@ Flask API for serving game data and proxying ElevenLabs TTS requests
 
 import os
 import json
+import logging
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import requests
@@ -17,6 +18,10 @@ app = Flask(__name__)
 
 # Enable CORS for all routes (allows frontend to call backend from different origin)
 CORS(app)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure max upload size (10MB)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
@@ -69,25 +74,37 @@ def get_config():
         'venue_name': VENUE_NAME
     })
 
+@app.route('/api/debug', methods=['GET'])
+def debug_paths():
+    """Debug endpoint to check paths and files"""
+    try:
+        info = {
+            'BASE_DIR': BASE_DIR,
+            'DATA_DIR': DATA_DIR,
+            'pool_path': os.path.join(DATA_DIR, 'pool.json'),
+            'BASE_DIR_exists': os.path.exists(BASE_DIR),
+            'DATA_DIR_exists': os.path.exists(DATA_DIR),
+            'pool_exists': os.path.exists(os.path.join(DATA_DIR, 'pool.json')),
+            'BASE_DIR_contents': os.listdir(BASE_DIR) if os.path.exists(BASE_DIR) else [],
+            'DATA_DIR_contents': os.listdir(DATA_DIR) if os.path.exists(DATA_DIR) else [],
+            'cwd': os.getcwd(),
+            '__file__': __file__
+        }
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/pool', methods=['GET'])
 def get_pool():
     """Get the song pool"""
     try:
         import json
         pool_path = os.path.join(DATA_DIR, 'pool.json')
-        
-        # Debug logging
-        print(f"[DEBUG] BASE_DIR: {BASE_DIR}")
-        print(f"[DEBUG] DATA_DIR: {DATA_DIR}")
-        print(f"[DEBUG] pool_path: {pool_path}")
-        print(f"[DEBUG] File exists: {os.path.exists(pool_path)}")
-        if os.path.exists(BASE_DIR):
-            print(f"[DEBUG] Contents of BASE_DIR: {os.listdir(BASE_DIR)}")
-        if os.path.exists(DATA_DIR):
-            print(f"[DEBUG] Contents of DATA_DIR: {os.listdir(DATA_DIR)}")
+        logger.info(f"Attempting to load pool from: {pool_path}")
         
         with open(pool_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        logger.info(f"Successfully loaded pool with {len(data.get('songs', []))} songs")
         return jsonify(data)
     except FileNotFoundError:
         return jsonify({
