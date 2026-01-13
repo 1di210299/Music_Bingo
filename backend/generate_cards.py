@@ -255,9 +255,9 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             orig_width, orig_height = pil_img.size
             aspect = orig_width / orig_height
             
-            # LARGER logo as requested (on top left)
-            max_width = 40  # Reduced from 50 to 40
-            max_height = 20  # Reduced from 25 to 20
+            # Logo size
+            max_width = 35  # Logo width
+            max_height = 18  # Logo height
             
             if aspect > (max_width / max_height):
                 new_width = max_width * mm
@@ -268,13 +268,17 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             
             pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
             
-            # Create header table with pub logo only (no Perfect DJ logo)
-            header_table = Table([[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style)]], 
-                                colWidths=[45*mm, 115*mm])
+            # Create header with 3 columns: logo left, title center, empty right
+            # This keeps the title centered on the page
+            header_table = Table(
+                [[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style), '']], 
+                colWidths=[40*mm, 110*mm, 40*mm]  # Balanced: 40mm + 110mm + 40mm = 190mm (A4 width)
+            )
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-                ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),      # Logo a la izquierda
+                ('ALIGN', (1, 0), (1, 0), 'CENTER'),    # Título centrado
+                ('ALIGN', (2, 0), (2, 0), 'RIGHT'),     # Espacio derecho
             ]))
             
             elements.append(header_table)
