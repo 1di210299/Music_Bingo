@@ -29,10 +29,21 @@ ELEVENLABS_VOICE_ID = os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
 VENUE_NAME = os.getenv('VENUE_NAME', 'this venue')
 
 # Paths
-BASE_DIR = Path(__file__).resolve().parent.parent  # /app/backend/
-APP_ROOT = BASE_DIR.parent  # /app/
+BASE_DIR = Path(__file__).resolve().parent.parent  # /app/backend/ or /app/api/..
+# In Docker: /app/api/__file__ -> parent = /app/api/ -> parent = /app/
+# So APP_ROOT should be /app/ where data/ and frontend/ are
+if (BASE_DIR / 'data').exists():
+    APP_ROOT = BASE_DIR
+elif (BASE_DIR.parent / 'data').exists():
+    APP_ROOT = BASE_DIR.parent
+else:
+    # Fallback: assume /app as root
+    APP_ROOT = Path('/app')
+
 DATA_DIR = APP_ROOT / 'data'
 FRONTEND_DIR = APP_ROOT / 'frontend'
+
+logger.info(f"Paths configured - BASE_DIR: {BASE_DIR}, APP_ROOT: {APP_ROOT}, DATA_DIR: {DATA_DIR}")
 
 # In-memory task storage (works with 1 gunicorn worker)
 tasks_storage = {}
