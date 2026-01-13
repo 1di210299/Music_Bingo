@@ -213,8 +213,10 @@ async function testVoice(event, voiceId, voiceName) {
         const sampleText = `Hello! This is the ${voiceName} voice. Perfect for your pub jingles and promotions.`;
         
         // Call TTS API
-        const apiUrl = CONFIG.API_URL || 'http://localhost:8080/api';
-        const response = await fetch(`${apiUrl}/generate-tts`, {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const endpoint = apiUrl.includes('/api') ? `${apiUrl}/generate-tts` : `${apiUrl}/api/generate-tts`;
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -318,8 +320,10 @@ async function generateJingle() {
     
     try {
         // Call API to start generation
-        const apiUrl = CONFIG.API_URL || 'http://localhost:8080/api';
-        const response = await fetch(`${apiUrl}/generate-jingle`, {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const endpoint = apiUrl.includes('/api') ? `${apiUrl}/generate-jingle` : `${apiUrl}/api/generate-jingle`;
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -349,11 +353,12 @@ async function generateJingle() {
 async function pollTaskStatus(taskId) {
     console.log('📊 Polling task status:', taskId);
     
-    const apiUrl = CONFIG.API_URL || 'http://localhost:8080/api';
+    const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+    const endpoint = apiUrl.includes('/api') ? `${apiUrl}/jingle-tasks/${taskId}` : `${apiUrl}/api/jingle-tasks/${taskId}`;
     
     pollingInterval = setInterval(async () => {
         try {
-            const response = await fetch(`${apiUrl}/jingle-tasks/${taskId}`);
+            const response = await fetch(endpoint);
             
             if (!response.ok) {
                 throw new Error('Failed to get task status');
@@ -410,8 +415,11 @@ function showCompletedJingle(result) {
     document.getElementById('audioPlayer').classList.remove('hidden');
     
     // Set audio source
-    const apiUrl = CONFIG.API_URL || 'http://localhost:8080/api';
-    const audioUrl = `${apiUrl}${result.audio_url}`;
+    const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+    // result.audio_url already includes /api/jingles/filename
+    const audioUrl = result.audio_url.startsWith('http') 
+        ? result.audio_url 
+        : `${apiUrl}${result.audio_url}`;
     
     const audio = document.getElementById('jingleAudio');
     audio.src = audioUrl;
