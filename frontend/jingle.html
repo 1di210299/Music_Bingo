@@ -8,8 +8,7 @@
     <style>
         /* Jingle-specific styles */
         .jingle-container {
-            max-width: 900px;
-            margin: 40px auto;
+            margin: 20px;
             padding: 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 20px;
@@ -19,17 +18,23 @@
         .jingle-header {
             text-align: center;
             color: white;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .jingle-header h1 {
-            font-size: 2.5em;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .jingle-header h2 {
+            font-size: 1.8em;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .jingle-header p {
-            font-size: 1.2em;
+            font-size: 1em;
             opacity: 0.9;
         }
 
@@ -404,10 +409,10 @@
             background: white;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             transition: all 0.3s;
         }
 
@@ -422,38 +427,48 @@
         }
 
         .jingle-checkbox {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
+            flex-shrink: 0;
         }
 
         .jingle-info {
             flex: 1;
+            min-width: 0;
         }
 
         .jingle-title {
             font-weight: 600;
             color: #333;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-size: 0.95em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .jingle-metadata {
-            font-size: 0.85em;
+            font-size: 0.75em;
             color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .jingle-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
+            flex-shrink: 0;
         }
 
         .icon-btn {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 1.2em;
+            font-size: 1em;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -487,9 +502,33 @@
             background: #da190b;
         }
 
+        /* Two Column Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .wizard-column {
+            max-width: 100%;
+        }
+
+        .library-column {
+            max-width: 100%;
+        }
+
+        @media (max-width: 1400px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .back-link {
             display: inline-block;
-            margin: 20px 0;
+            margin: 20px 0 0 20px;
             color: white;
             text-decoration: none;
             font-weight: 600;
@@ -546,33 +585,36 @@
     </style>
 </head>
 <body>
-    <div class="jingle-container">
-        <a href="game.html" class="back-link">← Back to Music Bingo</a>
-        
-        <div class="jingle-header">
-            <h1>🎵 Jingle Generator</h1>
-            <p>Create professional 10-second ad jingles in minutes</p>
-        </div>
+    <a href="game.html" class="back-link">← Back to Music Bingo</a>
+    
+    <!-- Two Column Layout -->
+    <div class="main-layout">
+        <!-- Left Column: Jingle Generator Wizard -->
+        <div class="jingle-container wizard-column">
+            <div class="jingle-header">
+                <h1>🎵 Jingle Generator</h1>
+                <p>Create professional 10-second ad jingles in minutes</p>
+            </div>
 
-        <!-- Wizard Steps -->
-        <div class="wizard-steps">
-            <div class="step active" data-step="1">
-                <div class="step-number">1</div>
-                <div class="step-label">Your Text</div>
+            <!-- Wizard Steps -->
+            <div class="wizard-steps">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Your Text</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Voice</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Music</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Generate</div>
+                </div>
             </div>
-            <div class="step" data-step="2">
-                <div class="step-number">2</div>
-                <div class="step-label">Voice</div>
-            </div>
-            <div class="step" data-step="3">
-                <div class="step-number">3</div>
-                <div class="step-label">Music</div>
-            </div>
-            <div class="step" data-step="4">
-                <div class="step-number">4</div>
-                <div class="step-label">Generate</div>
-            </div>
-        </div>
 
         <!-- Step 1: Text Input -->
         <div class="form-card" id="step1" data-step="1">
@@ -731,26 +773,26 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Jingle Library & Playlist Manager -->
-    <div class="jingle-container" style="margin-top: 30px;">
-        <div class="jingle-header">
-            <h2>📚 Your Jingle Library & Playlist</h2>
-            <p>Manage your created jingles and set up automatic playback during games</p>
         </div>
 
-        <div class="form-card">
-            <!-- Playlist Settings -->
-            <div class="playlist-settings" style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
-                <h3 style="margin-bottom: 15px;">🎵 Playlist Settings</h3>
-                <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                        <input type="checkbox" id="playlistEnabled" onchange="updatePlaylistSettings()">
-                        <span style="font-weight: 600;">Enable automatic jingle playback during games</span>
-                    </label>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label for="playlistInterval" style="font-weight: 600;">Play every</label>
+        <!-- Right Column: Jingle Library & Playlist -->
+        <div class="jingle-container library-column">
+            <div class="jingle-header">
+                <h2>📚 Your Jingle Library & Playlist</h2>
+                <p>Manage your created jingles and set up automatic playback during games</p>
+            </div>
+
+            <div class="form-card">
+                <!-- Playlist Settings -->
+                <div class="playlist-settings" style="margin-bottom: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                    <h3 style="margin-bottom: 15px; color: #333;">🎵 Playlist Settings</h3>
+                    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #333;">
+                            <input type="checkbox" id="playlistEnabled" onchange="updatePlaylistSettings()">
+                            <span style="font-weight: 600;">Enable automatic jingle playback during games</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px; color: #333;">
+                            <label for="playlistInterval" style="font-weight: 600;">Play every</label>
                         <input type="number" id="playlistInterval" min="1" max="10" value="3" 
                                style="width: 60px; padding: 5px; border: 2px solid #e0e0e0; border-radius: 5px;"
                                onchange="updatePlaylistSettings()">
@@ -765,7 +807,7 @@
 
             <!-- Jingle Library -->
             <div class="jingle-library">
-                <h3 style="margin-bottom: 15px;">📁 Your Jingles</h3>
+                <h3 style="margin-bottom: 15px; color: #333;">📁 Your Jingles</h3>
                 <div id="jinglesList" style="display: grid; gap: 15px;">
                     <!-- Jingles will be loaded here -->
                     <div style="text-align: center; padding: 40px; color: #999;">
@@ -773,6 +815,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 
