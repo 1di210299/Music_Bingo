@@ -45,8 +45,8 @@ except ImportError:
 
 # Configuration
 SCRIPT_DIR = Path(__file__).parent
-# In Docker, everything is in /app/, so no need to go to parent
-PROJECT_ROOT = SCRIPT_DIR
+# In Docker, everything is in /app/, locally need parent
+PROJECT_ROOT = SCRIPT_DIR.parent if (SCRIPT_DIR.parent / "data").exists() else SCRIPT_DIR
 INPUT_POOL = PROJECT_ROOT / "data" / "pool.json"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "cards"
 OUTPUT_FILE = OUTPUT_DIR / "music_bingo_cards.pdf"
@@ -268,18 +268,41 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
             
             pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
             
-            # Create header with 3 columns: logo left, title center, empty right
-            # This keeps the title centered on the page
-            header_table = Table(
-                [[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style), '']], 
-                colWidths=[40*mm, 110*mm, 40*mm]  # Balanced: 40mm + 110mm + 40mm = 190mm (A4 width)
-            )
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),      # Logo a la izquierda
-                ('ALIGN', (1, 0), (1, 0), 'CENTER'),    # Título centrado
-                ('ALIGN', (2, 0), (2, 0), 'RIGHT'),     # Espacio derecho
-            ]))
+            # Perfect DJ logo on right (optimized 0.11MB version)
+            perfect_dj_logo = None
+            try:
+                # Try multiple paths for Docker compatibility
+                for logo_path in PERFECT_DJ_LOGO_PATHS:
+                    if logo_path.exists():
+                        perfect_dj_logo = Image(str(logo_path), width=20*mm, height=20*mm)
+                        break
+            except Exception as e:
+                print(f"Warning: Could not load Perfect DJ logo: {e}")
+            
+            # Create header with logos on left and right, title centered
+            if perfect_dj_logo:
+                header_table = Table(
+                    [[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style), perfect_dj_logo]], 
+                    colWidths=[40*mm, 110*mm, 40*mm]
+                )
+                header_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (0, 0), (0, 0), 'LEFT'),      # Pub logo izquierda
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),    # Título centrado
+                    ('ALIGN', (2, 0), (2, 0), 'RIGHT'),     # Perfect DJ derecha
+                ]))
+            else:
+                # Fallback sin Perfect DJ logo
+                header_table = Table(
+                    [[pub_logo, Paragraph(f"<b>MUSIC BINGO</b><br/><font size='8'>{venue_name}</font>", header_style), '']], 
+                    colWidths=[40*mm, 110*mm, 40*mm]
+                )
+                header_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                    ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
+                ]))
             
             elements.append(header_table)
             elements.append(Spacer(1, 1*mm))  # Reduced from 2mm to 1mm
@@ -416,7 +439,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     ]))
     
     elements.append(prizes_table)
-    elements.append(Spacer(1, 0.5*mm))
+    elements.append(Spacer(1, 0.3*mm))  # Optimized
     
     # --- FOOTER SECTION ---
     footer_elements = []
@@ -461,7 +484,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         alignment=TA_CENTER,
     )
     card_text = Paragraph(f"<b>Card #{card_num}</b>", card_style)
-    elements.append(Spacer(1, 0.3*mm))  # Reduced from 0.5mm
+    elements.append(Spacer(1, 0.2*mm))  # Optimized
     elements.append(card_text)
     
     # Perfect DJ footer
@@ -473,7 +496,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
         alignment=TA_CENTER,
     )
     footer = Paragraph(f"Powered by Perfect DJ - {WEBSITE_URL}", footer_style)
-    elements.append(Spacer(1, 0.3*mm))  # Reduced from 0.5mm
+    elements.append(Spacer(1, 0.1*mm))  # Optimized
     elements.append(footer)
     
     return elements
@@ -491,10 +514,10 @@ def generate_batch_pdf(batch_data):
     doc = SimpleDocTemplate(
         temp_path,
         pagesize=A4,
-        leftMargin=10*mm,  # Reduced from 15mm
-        rightMargin=10*mm,  # Reduced from 15mm
-        topMargin=8*mm,  # Reduced from 10mm
-        bottomMargin=8*mm,  # Reduced from 10mm
+        leftMargin=10*mm,
+        rightMargin=10*mm,
+        topMargin=8*mm,
+        bottomMargin=5*mm,  # Optimized from 8mm
     )
     
     # Reconstruct QR buffer if data provided
