@@ -73,8 +73,14 @@ def generate_cards_async(request):
         game_number = data.get('game_number', 1)
         game_date = data.get('game_date')
         
+        # Get prizes
+        prize_4corners = data.get('prize_4corners', '')
+        prize_first_line = data.get('prize_first_line', '')
+        prize_full_house = data.get('prize_full_house', '')
+        
         logger.info(f"Starting async card generation: {num_players} cards for '{venue_name}'")
         logger.info(f"  pub_logo: {pub_logo}, social_media: {social_media}, include_qr: {include_qr}")
+        logger.info(f"  prizes: {prize_4corners}, {prize_first_line}, {prize_full_house}")
         
         task_id = str(uuid.uuid4())
         
@@ -119,6 +125,14 @@ def generate_cards_async(request):
                 if include_qr:
                     cmd.extend(['--include_qr', 'true'])
                     logger.info(f"Task {task_id}: QR code enabled")
+                
+                # Add prizes if provided
+                if prize_4corners:
+                    cmd.extend(['--prize_4corners', prize_4corners])
+                if prize_first_line:
+                    cmd.extend(['--prize_first_line', prize_first_line])
+                if prize_full_house:
+                    cmd.extend(['--prize_full_house', prize_full_house])
                 
                 logger.info(f"Task {task_id}: Running command: {' '.join(cmd)}")
                 

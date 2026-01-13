@@ -305,6 +305,11 @@ async function completeSetup() {
         // Get complete social media URL (platform + username)
         const socialMediaURL = includeQR ? getSocialMediaURL() : '';
         
+        // Get prizes (optional)
+        const prize4Corners = document.getElementById('prize4Corners')?.value.trim() || '';
+        const prizeFirstLine = document.getElementById('prizeFirstLine')?.value.trim() || '';
+        const prizeFullHouse = document.getElementById('prizeFullHouse')?.value.trim() || '';
+        
         // Save settings
         gameState.venueName = venueName;
         gameState.selectedDecades = selectedDecades;
@@ -315,6 +320,9 @@ async function completeSetup() {
         localStorage.setItem('pubLogo', pubLogo);
         localStorage.setItem('socialMedia', socialMediaURL);
         localStorage.setItem('includeQR', includeQR.toString());
+        localStorage.setItem('prize4Corners', prize4Corners);
+        localStorage.setItem('prizeFirstLine', prizeFirstLine);
+        localStorage.setItem('prizeFullHouse', prizeFullHouse);
         localStorage.setItem('setupCompleted', 'true');
         
         // Update main UI inputs
@@ -1708,8 +1716,14 @@ async function generateCards() {
         const socialMedia = localStorage.getItem('socialMedia') || '';
         const includeQR = localStorage.getItem('includeQR') === 'true';
         
+        // Get prizes
+        const prize4Corners = localStorage.getItem('prize4Corners') || '';
+        const prizeFirstLine = localStorage.getItem('prizeFirstLine') || '';
+        const prizeFullHouse = localStorage.getItem('prizeFullHouse') || '';
+        
         console.log('   Social Media:', socialMedia);
         console.log('   Include QR:', includeQR);
+        console.log('   Prizes:', { prize4Corners, prizeFirstLine, prizeFullHouse });
         console.log('📤 Sending async request to backend...');
         
         // Use new async endpoint
@@ -1724,7 +1738,10 @@ async function generateCards() {
                 optimal_songs: optimalSongs,
                 pub_logo: pubLogo,
                 social_media: socialMedia,
-                include_qr: includeQR
+                include_qr: includeQR,
+                prize_4corners: prize4Corners,
+                prize_first_line: prizeFirstLine,
+                prize_full_house: prizeFullHouse
             })
         });
         

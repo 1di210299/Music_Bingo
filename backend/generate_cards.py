@@ -207,7 +207,8 @@ def get_logo_with_aspect_ratio(logo_buffer: BytesIO, max_width: float = 40, max_
 def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str, 
                      pub_logo_path: str = None, social_media_url: str = None, 
                      include_qr: bool = False, game_number: int = 1, game_date: str = None,
-                     qr_buffer: BytesIO = None) -> List:
+                     qr_buffer: BytesIO = None, 
+                     prize_4corners: str = '', prize_first_line: str = '', prize_full_house: str = '') -> List:
     """Create a single bingo card with ReportLab elements"""
     elements = []
     
@@ -416,15 +417,15 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     elements.append(prizes_header)
     elements.append(Spacer(1, 0.5*mm))
     
-    # Single line with all three prizes
+    # Single line with all three prizes (use provided values or underscores)
     prizes_data = [
         [
             Paragraph("<b>All 4 Corners:</b>", prizes_detail_style),
-            Paragraph("__________", prizes_detail_style),
+            Paragraph(prize_4corners or "__________", prizes_detail_style),
             Paragraph("<b>First Line:</b>", prizes_detail_style),
-            Paragraph("__________", prizes_detail_style),
+            Paragraph(prize_first_line or "__________", prizes_detail_style),
             Paragraph("<b>Full House:</b>", prizes_detail_style),
-            Paragraph("__________", prizes_detail_style)
+            Paragraph(prize_full_house or "__________", prizes_detail_style)
         ]
     ]
     
@@ -504,7 +505,7 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
 
 def generate_batch_pdf(batch_data):
     """Generate a PDF batch with 10 cards - runs in parallel"""
-    batch_num, cards_range, selected_songs, venue_name, pub_logo_path, social_media, include_qr, game_number, game_date, qr_buffer_data = batch_data
+    batch_num, cards_range, selected_songs, venue_name, pub_logo_path, social_media, include_qr, game_number, game_date, qr_buffer_data, prize_4corners, prize_first_line, prize_full_house = batch_data
     
     # Create temp file for this batch
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf', prefix=f'batch_{batch_num}_')
@@ -540,7 +541,10 @@ def generate_batch_pdf(batch_data):
             include_qr,
             game_number,
             game_date,
-            qr_buffer_cache
+            qr_buffer_cache,
+            prize_4corners,
+            prize_first_line,
+            prize_full_house
         )
         
         story.extend(card_elements)
@@ -558,7 +562,8 @@ def generate_batch_pdf(batch_data):
 
 def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
                   pub_logo: str = None, social_media: str = None, include_qr: bool = False,
-                  game_number: int = 1, game_date: str = None):
+                  game_number: int = 1, game_date: str = None,
+                  prize_4corners: str = '', prize_first_line: str = '', prize_full_house: str = ''):
     """Generate all bingo cards"""
     import time
     start_time = time.time()
@@ -674,7 +679,10 @@ def generate_cards(venue_name: str = "Music Bingo", num_players: int = 25,
                 include_qr,
                 game_number,
                 game_date,
-                qr_buffer_data
+                qr_buffer_data,
+                prize_4corners,
+                prize_first_line,
+                prize_full_house
             ))
         
         # Generate PDFs in parallel with progress tracking
@@ -823,6 +831,9 @@ if __name__ == '__main__':
                        help='Whether to include QR code (true/false)')
     parser.add_argument('--game_number', type=int, default=1, help='Game number (for multiple games)')
     parser.add_argument('--game_date', default=None, help='Game date (default: today)')
+    parser.add_argument('--prize_4corners', default='', help='Prize for All 4 Corners')
+    parser.add_argument('--prize_first_line', default='', help='Prize for First Line')
+    parser.add_argument('--prize_full_house', default='', help='Prize for Full House')
     
     args = parser.parse_args()
     
@@ -833,5 +844,8 @@ if __name__ == '__main__':
         social_media=args.social_media,
         include_qr=args.include_qr,
         game_number=args.game_number,
-        game_date=args.game_date
+        game_date=args.game_date,
+        prize_4corners=args.prize_4corners,
+        prize_first_line=args.prize_first_line,
+        prize_full_house=args.prize_full_house
     )

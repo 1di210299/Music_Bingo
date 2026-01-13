@@ -820,6 +820,19 @@ button:disabled {
     border-radius: 6px;
 }
 
+.prizes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.section-description {
+    color: #666;
+    font-size: 0.9em;
+    margin: 5px 0 15px 0;
+}
+
 
 @keyframes slideDown {
     from {
