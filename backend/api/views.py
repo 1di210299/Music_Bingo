@@ -283,6 +283,60 @@ def generate_tts(request):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
+@api_view(['POST'])
+def generate_tts_preview(request):
+    """Generate TTS preview with custom voice settings"""
+    if not ELEVENLABS_API_KEY:
+        return Response({'error': 'ElevenLabs API key not configured'}, status=500)
+    
+    try:
+        text = request.data.get('text', '')
+        voice_id = request.data.get('voice_id', ELEVENLABS_VOICE_ID)
+        voice_settings = request.data.get('voice_settings', {})
+        
+        if not text:
+            return Response({'error': 'No text provided'}, status=400)
+        
+        # Use provided settings or defaults
+        settings_payload = {
+            'stability': voice_settings.get('stability', 0.5),
+            'similarity_boost': voice_settings.get('similarity_boost', 0.75),
+            'style': voice_settings.get('style', 0.5),
+            'use_speaker_boost': voice_settings.get('use_speaker_boost', True)
+        }
+        
+        logger.info(f"Generating TTS preview: voice={voice_id}, settings={settings_payload}")
+        
+        url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}'
+        
+        response = requests.post(
+            url,
+            headers={
+                'xi-api-key': ELEVENLABS_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            json={
+                'text': text,
+                'model_id': 'eleven_multilingual_v2',
+                'voice_settings': settings_payload,
+                'optimize_streaming_latency': 1,
+                'output_format': 'mp3_44100_128'
+            },
+            timeout=30
+        )
+        
+        if not response.ok:
+            return Response({
+                'error': f'ElevenLabs API error: {response.status_code}',
+                'details': response.text
+            }, status=response.status_code)
+        
+        return HttpResponse(response.content, content_type='audio/mpeg')
+        
+    except Exception as e:
+        logger.error(f"Error generating TTS preview: {e}", exc_info=True)
+        return Response({'error': str(e)}, status=500)
+
 @api_view(['GET'])
 def get_announcements(request):
     """Get announcements with venue name"""
@@ -397,6 +451,15 @@ def generate_jingle(request):
         music_prompt = data.get('music_prompt', 'upbeat energetic pub background music')
         duration = int(data.get('duration', 10))
         
+        # Get voice settings (with defaults)
+        voice_settings = data.get('voiceSettings', {})
+        voice_settings_payload = {
+            'stability': voice_settings.get('stability', 0.5),
+            'similarity_boost': voice_settings.get('similarity_boost', 0.75),
+            'style': voice_settings.get('style', 0.5),
+            'use_speaker_boost': voice_settings.get('use_speaker_boost', True)
+        }
+        
         # Validation
         if not text:
             return Response({'error': 'Text is required'}, status=400)
@@ -407,7 +470,7 @@ def generate_jingle(request):
         if not ELEVENLABS_API_KEY:
             return Response({'error': 'ElevenLabs API key not configured'}, status=500)
         
-        logger.info(f"Starting jingle generation: text='{text}', music_prompt='{music_prompt}'")
+        logger.info(f"Starting jingle generation: text='{text}', music_prompt='{music_prompt}', voice_settings={voice_settings_payload}")
         
         # Generate task ID
         task_id = str(uuid.uuid4())
@@ -435,11 +498,8 @@ def generate_jingle(request):
                 tts_url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}'
                 tts_payload = {
                     'text': text,
-                    'model_id': 'eleven_monolingual_v1',
-                    'voice_settings': {
-                        'stability': 0.5,
-                        'similarity_boost': 0.75
-                    }
+                    'model_id': 'eleven_multilingual_v2',
+                    'voice_settings': voice_settings_payload
                 }
                 tts_headers = {
                     'xi-api-key': ELEVENLABS_API_KEY,

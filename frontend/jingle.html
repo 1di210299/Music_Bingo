@@ -242,6 +242,183 @@
             background: #4CAF50;
         }
 
+        .voice-settings {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .voice-settings h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.1em;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .setting-value {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .slider-container {
+            position: relative;
+        }
+
+        .voice-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #e0e0e0 0%, #667eea 100%);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .voice-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .voice-slider::-webkit-slider-thumb:hover {
+            background: #764ba2;
+            transform: scale(1.2);
+        }
+
+        .voice-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .voice-slider::-moz-range-thumb:hover {
+            background: #764ba2;
+            transform: scale(1.2);
+        }
+
+        .setting-description {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .speaker-boost-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: #ccc;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+        }
+
+        .preview-controls {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .preview-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .preview-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+
+        .preview-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-btn.playing {
+            background: #4CAF50;
+        }
+
         .music-styles {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -842,6 +1019,95 @@
                             🔊 Test Voice
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Voice Settings Controls -->
+            <div class="voice-settings">
+                <h3>🎛️ Advanced Voice Settings</h3>
+                <div class="settings-grid">
+                    <!-- Stability -->
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Stability</span>
+                            <span class="setting-value" id="stabilityValue">0.50</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" 
+                                   class="voice-slider" 
+                                   id="stabilitySlider" 
+                                   min="0" 
+                                   max="100" 
+                                   value="50"
+                                   oninput="updateVoiceSetting('stability', this.value)">
+                        </div>
+                        <div class="setting-description">
+                            Lower = More expressive & variable | Higher = More consistent & predictable
+                        </div>
+                    </div>
+
+                    <!-- Similarity Boost / Clarity -->
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Clarity (Similarity Boost)</span>
+                            <span class="setting-value" id="similarityValue">0.75</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" 
+                                   class="voice-slider" 
+                                   id="similaritySlider" 
+                                   min="0" 
+                                   max="100" 
+                                   value="75"
+                                   oninput="updateVoiceSetting('similarity_boost', this.value)">
+                        </div>
+                        <div class="setting-description">
+                            Lower = More natural | Higher = More faithful to original voice
+                        </div>
+                    </div>
+
+                    <!-- Style / Exaggeration -->
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Style (Exaggeration)</span>
+                            <span class="setting-value" id="styleValue">0.50</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" 
+                                   class="voice-slider" 
+                                   id="styleSlider" 
+                                   min="0" 
+                                   max="100" 
+                                   value="50"
+                                   oninput="updateVoiceSetting('style', this.value)">
+                        </div>
+                        <div class="setting-description">
+                            Lower = Neutral tone | Higher = More dramatized & expressive
+                        </div>
+                    </div>
+
+                    <!-- Speaker Boost -->
+                    <div class="setting-item">
+                        <div class="setting-label">
+                            <span>Speaker Boost</span>
+                            <span class="setting-value" id="speakerBoostValue">ON</span>
+                        </div>
+                        <div class="speaker-boost-toggle">
+                            <div class="toggle-switch active" id="speakerBoostToggle" onclick="toggleSpeakerBoost()">
+                            </div>
+                            <span style="font-size: 0.9em; color: #666;">Enhances clarity in noisy environments</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Controls -->
+                <div class="preview-controls">
+                    <button class="preview-btn" id="previewVoiceBtn" onclick="previewVoiceWithSettings()">
+                        🎵 Preview with Current Settings
+                    </button>
+                    <button class="preview-btn" onclick="resetVoiceSettings()">
+                        🔄 Reset to Defaults
+                    </button>
                 </div>
             </div>
 

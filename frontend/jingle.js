@@ -12,10 +12,17 @@ let jingleData = {
     text: '',
     voiceId: '21m00Tcm4TlvDq8ikWAM', // Default British Male
     musicPrompt: 'upbeat energetic pub background music with guitar',
-    duration: 10
+    duration: 10,
+    voiceSettings: {
+        stability: 0.50,
+        similarity_boost: 0.75,
+        style: 0.50,
+        use_speaker_boost: true
+    }
 };
 
 let pollingInterval = null;
+let previewAudio = null; // For voice preview
 
 // ============================================================================
 // INITIALIZATION
@@ -977,4 +984,159 @@ function testPlaylist() {
     // Play first jingle in playlist
     playJingle(playlistState.jingles[0]);
     alert(`Testing playlist: Playing ${playlistState.jingles[0]}\n\nPlaylist has ${playlistState.jingles.length} jingles total.`);
+}
+
+// ============================================================================
+// VOICE SETTINGS CONTROLS
+// ============================================================================
+
+function updateVoiceSetting(setting, value) {
+    // Convert 0-100 slider value to 0-1 range
+    const normalizedValue = value / 100;
+    
+    // Update state
+    jingleData.voiceSettings[setting] = normalizedValue;
+    
+    // Update display
+    const displayValue = normalizedValue.toFixed(2);
+    if (setting === 'stability') {
+        document.getElementById('stabilityValue').textContent = displayValue;
+    } else if (setting === 'similarity_boost') {
+        document.getElementById('similarityValue').textContent = displayValue;
+    } else if (setting === 'style') {
+        document.getElementById('styleValue').textContent = displayValue;
+    }
+    
+    console.log(`Voice setting updated: ${setting} = ${displayValue}`);
+}
+
+function toggleSpeakerBoost() {
+    const toggle = document.getElementById('speakerBoostToggle');
+    const value = document.getElementById('speakerBoostValue');
+    
+    // Toggle state
+    jingleData.voiceSettings.use_speaker_boost = !jingleData.voiceSettings.use_speaker_boost;
+    
+    // Update UI
+    if (jingleData.voiceSettings.use_speaker_boost) {
+        toggle.classList.add('active');
+        value.textContent = 'ON';
+        value.style.background = '#4CAF50';
+    } else {
+        toggle.classList.remove('active');
+        value.textContent = 'OFF';
+        value.style.background = '#f44336';
+    }
+    
+    console.log(`Speaker boost: ${jingleData.voiceSettings.use_speaker_boost}`);
+}
+
+function resetVoiceSettings() {
+    // Reset to defaults
+    jingleData.voiceSettings = {
+        stability: 0.50,
+        similarity_boost: 0.75,
+        style: 0.50,
+        use_speaker_boost: true
+    };
+    
+    // Update sliders
+    document.getElementById('stabilitySlider').value = 50;
+    document.getElementById('similaritySlider').value = 75;
+    document.getElementById('styleSlider').value = 50;
+    
+    // Update displays
+    document.getElementById('stabilityValue').textContent = '0.50';
+    document.getElementById('similarityValue').textContent = '0.75';
+    document.getElementById('styleValue').textContent = '0.50';
+    
+    // Update speaker boost
+    const toggle = document.getElementById('speakerBoostToggle');
+    const value = document.getElementById('speakerBoostValue');
+    toggle.classList.add('active');
+    value.textContent = 'ON';
+    value.style.background = '#4CAF50';
+    
+    showQuickMessage('✅ Voice settings reset to defaults');
+    console.log('Voice settings reset to defaults');
+}
+
+async function previewVoiceWithSettings() {
+    const previewBtn = document.getElementById('previewVoiceBtn');
+    
+    // Stop any current preview
+    if (previewAudio) {
+        previewAudio.pause();
+        previewAudio = null;
+        previewBtn.classList.remove('playing');
+        previewBtn.innerHTML = '🎵 Preview with Current Settings';
+    }
+    
+    // Get current voice
+    const selectedVoice = document.querySelector('.voice-card.selected');
+    if (!selectedVoice) {
+        showQuickMessage('⚠️ Please select a voice first');
+        return;
+    }
+    
+    const voiceId = selectedVoice.dataset.voice;
+    const previewText = jingleData.text || 'Welcome to Music Bingo at our venue! Join us for an amazing evening of fun and entertainment!';
+    
+    try {
+        previewBtn.disabled = true;
+        previewBtn.innerHTML = '⏳ Generating preview...';
+        
+        console.log('Previewing voice with settings:', jingleData.voiceSettings);
+        
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const endpoint = apiUrl.includes('/api') ? `${apiUrl}/generate-tts-preview` : `${apiUrl}/api/generate-tts-preview`;
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: previewText,
+                voice_id: voiceId,
+                voice_settings: jingleData.voiceSettings
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to generate preview');
+        }
+        
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        previewAudio = new Audio(audioUrl);
+        previewBtn.classList.add('playing');
+        previewBtn.innerHTML = '⏸️ Stop Preview';
+        
+        previewAudio.play();
+        
+        previewAudio.onended = () => {
+            previewBtn.classList.remove('playing');
+            previewBtn.innerHTML = '🎵 Preview with Current Settings';
+            previewBtn.disabled = false;
+            URL.revokeObjectURL(audioUrl);
+        };
+        
+        previewAudio.onerror = () => {
+            previewBtn.classList.remove('playing');
+            previewBtn.innerHTML = '🎵 Preview with Current Settings';
+            previewBtn.disabled = false;
+            showQuickMessage('❌ Error playing preview');
+        };
+        
+        previewBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error generating voice preview:', error);
+        showQuickMessage('❌ Failed to generate preview');
+        previewBtn.classList.remove('playing');
+        previewBtn.innerHTML = '🎵 Preview with Current Settings';
+        previewBtn.disabled = false;
+    }
 }
