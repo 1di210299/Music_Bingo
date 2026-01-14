@@ -94,7 +94,40 @@ function resetWizard() {
     document.getElementById('generateButtons').style.display = 'flex';
     document.getElementById('errorMessage').classList.add('hidden');
     
+    // Scroll wizard to top
+    const wizardColumn = document.querySelector('.wizard-column');
+    if (wizardColumn) wizardColumn.scrollTop = 0;
+    
     updateCharCount();
+    
+    // Show success message
+    showQuickMessage('✅ Ready to create another jingle!');
+}
+
+function showQuickMessage(message) {
+    // Create temporary message
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #4CAF50;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    msgDiv.textContent = message;
+    document.body.appendChild(msgDiv);
+    
+    setTimeout(() => {
+        msgDiv.style.opacity = '0';
+        msgDiv.style.transition = 'opacity 0.3s';
+        setTimeout(() => msgDiv.remove(), 300);
+    }, 2000);
 }
 
 // ============================================================================
@@ -143,16 +176,165 @@ function validateText() {
 }
 
 function initializeTemplates() {
-    const templateButtons = document.querySelectorAll('.template-btn');
+    loadSavedTemplates();
+}
+
+function useQuickTemplate(text) {
+    document.getElementById('jingleText').value = text;
+    jingleData.text = text;
+    updateCharCount();
+}
+
+// ============================================================================
+// TEMPLATE SYSTEM
+// ============================================================================
+
+function loadSavedTemplates() {
+    const templates = JSON.parse(localStorage.getItem('jingleTemplates') || '[]');
+    const selector = document.getElementById('templateSelector');
     
-    templateButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const template = btn.getAttribute('data-template');
-            document.getElementById('jingleText').value = template;
-            jingleData.text = template;
-            updateCharCount();
-        });
+    // Clear existing options except first
+    selector.innerHTML = '<option value="">-- Select a template or start fresh --</option>';
+    
+    // Add saved templates
+    templates.forEach((template, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${template.name} (${template.voiceName} + ${template.musicStyle})`;
+        selector.appendChild(option);
     });
+}
+
+function loadTemplate() {
+    const selector = document.getElementById('templateSelector');
+    const index = selector.value;
+    
+    if (index === '') return;
+    
+    const templates = JSON.parse(localStorage.getItem('jingleTemplates') || '[]');
+    const template = templates[index];
+    
+    if (!template) return;
+    
+    // Load template data
+    document.getElementById('jingleText').value = template.text || '';
+    jingleData.text = template.text || '';
+    jingleData.voiceId = template.voiceId;
+    jingleData.musicPrompt = template.musicPrompt;
+    
+    updateCharCount();
+    
+    showQuickMessage(`✅ Template "${template.name}" loaded!`);
+}
+
+function showSaveTemplateDialog() {
+    // Validate we have data to save
+    if (!jingleData.text || !jingleData.voiceId || !jingleData.musicPrompt) {
+        alert('Please complete at least steps 1-3 before saving a template');
+        return;
+    }
+    
+    // Create dialog
+    const overlay = document.createElement('div');
+    overlay.className = 'template-dialog-overlay';
+    overlay.innerHTML = `
+        <div class="template-dialog">
+            <h3>💾 Save Jingle Template</h3>
+            <p style="color: #666; margin-bottom: 15px;">
+                Give your template a name so you can reuse this configuration later
+            </p>
+            <input type="text" id="templateName" placeholder="e.g., Happy Hour - George - Upbeat" autofocus>
+            <div style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                <strong>Saved:</strong><br>
+                Text: ${jingleData.text.substring(0, 40)}...<br>
+                Voice: ${getVoiceName(jingleData.voiceId)}<br>
+                Music: ${getMusicStyleName(jingleData.musicPrompt)}
+            </div>
+            <div class="template-dialog-buttons">
+                <button class="btn btn-secondary" onclick="closeSaveTemplateDialog()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTemplate()">💾 Save Template</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Focus input
+    setTimeout(() => {
+        document.getElementById('templateName').focus();
+        document.getElementById('templateName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveTemplate();
+        });
+    }, 100);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSaveTemplateDialog();
+    });
+}
+
+function closeSaveTemplateDialog() {
+    const overlay = document.querySelector('.template-dialog-overlay');
+    if (overlay) overlay.remove();
+}
+
+function saveTemplate() {
+    const nameInput = document.getElementById('templateName');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+        alert('Please enter a template name');
+        nameInput.focus();
+        return;
+    }
+    
+    // Get templates
+    const templates = JSON.parse(localStorage.getItem('jingleTemplates') || '[]');
+    
+    // Create new template
+    const template = {
+        name: name,
+        text: jingleData.text,
+        voiceId: jingleData.voiceId,
+        voiceName: getVoiceName(jingleData.voiceId),
+        musicPrompt: jingleData.musicPrompt,
+        musicStyle: getMusicStyleName(jingleData.musicPrompt),
+        created: new Date().toISOString()
+    };
+    
+    // Add to templates
+    templates.push(template);
+    
+    // Save to localStorage
+    localStorage.setItem('jingleTemplates', JSON.stringify(templates));
+    
+    // Close dialog
+    closeSaveTemplateDialog();
+    
+    // Reload template selector
+    loadSavedTemplates();
+    
+    // Show success
+    showQuickMessage(`✅ Template "${name}" saved!`);
+}
+
+function getVoiceName(voiceId) {
+    const voices = {
+        '21m00Tcm4TlvDq8ikWAM': 'British Male (Rachel)',
+        'XrExE9yKIg1WjnnlVkGX': 'British Female (Charlotte)',
+        'JBFqnCBsd6RMkjVDRZzb': 'British Male (George)'
+    };
+    return voices[voiceId] || 'Unknown';
+}
+
+function getMusicStyleName(prompt) {
+    if (prompt.includes('upbeat energetic')) return 'Upbeat';
+    if (prompt.includes('smooth jazz')) return 'Smooth Jazz';
+    if (prompt.includes('rock guitar')) return 'Rock';
+    if (prompt.includes('electronic')) return 'Electronic';
+    if (prompt.includes('irish folk')) return 'Irish Folk';
+    if (prompt.includes('funky')) return 'Funky';
+    return 'Custom';
 }
 
 // ============================================================================
