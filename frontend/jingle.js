@@ -320,9 +320,14 @@ function saveTemplate() {
 
 function getVoiceName(voiceId) {
     const voices = {
-        '21m00Tcm4TlvDq8ikWAM': 'British Male (Rachel)',
-        'XrExE9yKIg1WjnnlVkGX': 'British Female (Charlotte)',
-        'JBFqnCBsd6RMkjVDRZzb': 'British Male (George)'
+        '21m00Tcm4TlvDq8ikWAM': 'British Male',
+        'EXAVITQu4vr4xnSDxMaL': 'British Female',
+        'pNInz6obpgDQGcFmaJgB': 'Energetic',
+        'JBFqnCBsd6RMkjVDRZzb': 'George',
+        'XB0fDUnXU5powFXDhCwa': 'Charlotte',
+        'N2lVS1w4EtoT3dr4eOWO': 'Callum',
+        'IKne3meq5aSn9XLyUdCD': 'Charlie',
+        'cgSgspJ2msm6clMCkdW9': 'Jessica'
     };
     return voices[voiceId] || 'Unknown';
 }
