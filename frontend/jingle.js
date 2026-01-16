@@ -11,7 +11,7 @@ let currentStep = 1;
 let jingleData = {
     text: '',
     voiceId: '21m00Tcm4TlvDq8ikWAM', // Default British Male
-    musicPrompt: 'upbeat energetic pub background music with guitar',
+    musicPrompt: 'upbeat energetic electric guitar rock instrumental, clean, no vocals, no ambient sounds',
     duration: 10,
     voiceSettings: {
         stability: 0.65,           // Higher for consistency in noisy environments
@@ -385,22 +385,22 @@ function getVoiceName(voiceId) {
 
 function getMusicStyleName(prompt) {
     // PUB/ENTERTAINMENT STYLES
-    if (prompt.includes('pub') && prompt.includes('guitar')) return 'Pub Rock';
-    if (prompt.includes('jazzy piano') || prompt.includes('smooth jazz')) return 'Jazz Piano';
+    if (prompt.includes('electric guitar rock')) return 'Pub Rock';
+    if (prompt.includes('jazz piano')) return 'Jazz Piano';
     if (prompt.includes('electronic dance')) return 'Electronic';
     if (prompt.includes('irish folk')) return 'Irish Folk';
     if (prompt.includes('funky disco')) return 'Funky';
     
     // COMMERCIAL/ADVERTISING STYLES
-    if (prompt.includes('commercial jingle') || prompt.includes('commercial pop')) return 'Commercial Pop';
+    if (prompt.includes('commercial pop')) return 'Commercial Pop';
     if (prompt.includes('corporate') && prompt.includes('motivational')) return 'Corporate';
-    if (prompt.includes('whistling ukulele') || prompt.includes('happy commercial')) return 'Happy Whistling';
+    if (prompt.includes('ukulele') && prompt.includes('whistling')) return 'Happy Whistling';
     if (prompt.includes('retro') && prompt.includes('80s')) return 'Retro 80s';
     
     // VERSATILE/EVENT STYLES
-    if (prompt.includes('acoustic') && prompt.includes('folk')) return 'Acoustic';
-    if (prompt.includes('rock and roll') || prompt.includes('rock guitar')) return 'Rock & Roll';
-    if (prompt.includes('chill lounge') || prompt.includes('relaxing')) return 'Chill Lounge';
+    if (prompt.includes('acoustic folk')) return 'Acoustic';
+    if (prompt.includes('rock and roll')) return 'Rock & Roll';
+    if (prompt.includes('chill lounge')) return 'Chill Lounge';
     
     return 'Custom';
 }
