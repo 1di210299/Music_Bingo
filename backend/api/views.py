@@ -468,8 +468,8 @@ def generate_jingle(request):
         if not text:
             return Response({'error': 'Text is required'}, status=400)
         
-        if len(text) > 150:
-            return Response({'error': 'Text too long (max 150 characters)'}, status=400)
+        if len(text) > 1000:
+            return Response({'error': 'Text too long (max 1000 characters / ~200 words)'}, status=400)
         
         if not ELEVENLABS_API_KEY:
             return Response({'error': 'ElevenLabs API key not configured'}, status=500)
