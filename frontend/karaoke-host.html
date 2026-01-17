@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke Host Control | Music Bingo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #764ba2;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .venue-info {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .current-singer {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .current-singer h3 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .current-singer .song-info {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .current-singer .artist {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .queue-list {
+            list-style: none;
+        }
+
+        .queue-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .queue-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .queue-item .position {
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .queue-item .info {
+            flex: 1;
+            margin: 0 15px;
+        }
+
+        .queue-item .name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .queue-item .song {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .queue-item .wait-time {
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 3px;
+        }
+
+        .queue-item .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state .emoji {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-box .label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .controls button {
+            flex: 1;
+            padding: 12px;
+            font-size: 1em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .status-waiting {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-active {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-paused {
+            background: #6c757d;
+            color: white;
+        }
+
+        /* Setup Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Setup Modal -->
+    <div id="setupModal" class="modal show">
+        <div class="modal-content">
+            <h2>🎤 Start Karaoke Session</h2>
+            <div class="form-group">
+                <label for="venueName">Venue Name</label>
+                <input type="text" id="venueName" placeholder="e.g., The Admiral Rodney">
+            </div>
+            <button class="btn-primary" onclick="startSession()" style="width: 100%; padding: 15px; font-size: 1.1em;">
+                Start Session
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🎤 Karaoke Host Control</h1>
+            <div class="venue-info">
+                <span id="venueDisplay">No session active</span>
+                <span id="statusBadge" class="status-badge status-waiting">Waiting</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left: Current Singer & Queue -->
+            <div>
+                <!-- Current Singer -->
+                <div class="card">
+                    <h2>🎵 Now Singing</h2>
+                    <div id="currentSinger">
+                        <div class="empty-state">
+                            <div class="emoji">🎤</div>
+                            <p>No one is singing yet</p>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button class="btn-success" onclick="completeCurrentSong()">✓ Complete Song</button>
+                        <button class="btn-danger" onclick="skipCurrentSong()">⏭ Skip</button>
+                    </div>
+                </div>
+
+                <!-- Queue -->
+                <div class="card" style="margin-top: 20px;">
+                    <h2>📋 Queue (<span id="queueCount">0</span>)</h2>
+                    <ul id="queueList" class="queue-list">
+                        <li class="empty-state">
+                            <div class="emoji">📭</div>
+                            <p>Queue is empty</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right: Stats & Info -->
+            <div>
+                <div class="card">
+                    <h2>📊 Session Stats</h2>
+                    <div class="stats">
+                        <div class="stat-box">
+                            <div class="number" id="totalInQueue">0</div>
+                            <div class="label">In Queue</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="number" id="totalCompleted">0</div>
+                            <div class="label">Completed</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2>ℹ️ Information</h2>
+                    <p style="color: #666; line-height: 1.6;">
+                        <strong>For participants:</strong><br>
+                        Go to <strong style="color: #667eea;">karaoke.html</strong> to join the queue and select songs.
+                    </p>
+                    <p style="color: #666; line-height: 1.6; margin-top: 15px;">
+                        <strong>Queue Management:</strong><br>
+                        Songs will auto-advance when completed. Use Skip to move to next singer immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let sessionId = null;
+        let venueName = null;
+        let pollInterval = null;
+
+        async function startSession() {
+            const venueInput = document.getElementById('venueName');
+            venueName = venueInput.value.trim();
+            
+            if (!venueName) {
+                alert('Please enter a venue name');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CONFIG.API_URL}/api/karaoke/session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ venue_name: venueName })
+                });
+
+                const data = await response.json();
+                sessionId = data.id;
+                
+                document.getElementById('venueDisplay').textContent = venueName;
+                document.getElementById('setupModal').classList.remove('show');
+                
+                // Start polling for updates
+                loadSessionData();
+                pollInterval = setInterval(loadSessionData, 3000);
+                
+                console.log('✅ Session started:', data);
+            } catch (error) {
+                console.error('Error starting session:', error);
+                alert('Error starting session: ' + error.message);
+            }
+        }
+
+        async function loadSessionData() {
+            if (!venueName) return;
+
+            try {
+                const response = await fetch(`${CONFIG.API_URL}/api/karaoke/session/${encodeURIComponent(venueName)}`);
+                const data = await response.json();
+                
+                // Update current singer
+                updateCurrentSinger(data.current_singer);
+                
+                // Update queue
+                updateQueue(data.queue);
+                
+                // Update stats
+                document.getElementById('queueCount').textContent = data.queue.length;
+                document.getElementById('totalInQueue').textContent = data.queue.length;
+                
+            } catch (error) {
+                console.error('Error loading session:', error);
+            }
+        }
+
+        function updateCurrentSinger(singer) {
+            const container = document.getElementById('currentSinger');
+            
+            if (!singer) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">🎤</div>
+                        <p>No one is singing yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="current-singer">
+                    <h3>${singer.name}</h3>
+                    <div class="song-info">${singer.song_title}</div>
+                    <div class="artist">${singer.artist}</div>
+                </div>
+            `;
+        }
+
+        function updateQueue(queue) {
+            const list = document.getElementById('queueList');
+            
+            if (queue.length === 0) {
+                list.innerHTML = `
+                    <li class="empty-state">
+                        <div class="emoji">📭</div>
+                        <p>Queue is empty</p>
+                    </li>
+                `;
+                return;
+            }
+
+            list.innerHTML = queue.map(entry => `
+                <li class="queue-item">
+                    <div class="position">${entry.position}</div>
+                    <div class="info">
+                        <div class="name">${entry.name}</div>
+                        <div class="song">${entry.song_title} - ${entry.artist}</div>
+                        <div class="wait-time">⏱ ~${entry.estimated_wait} min wait</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-danger" onclick="cancelEntry(${entry.id})">✕</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        async function completeCurrentSong() {
+            // Get current singer ID from the displayed data
+            const response = await fetch(`${CONFIG.API_URL}/api/karaoke/session/${encodeURIComponent(venueName)}`);
+            const data = await response.json();
+            
+            if (!data.current_singer) {
+                alert('No one is currently singing');
+                return;
+            }
+
+            try {
+                await fetch(`${CONFIG.API_URL}/api/karaoke/queue/${data.current_singer.id}/complete`, {
+                    method: 'PATCH'
+                });
+                
+                console.log('✅ Song completed');
+                loadSessionData();
+            } catch (error) {
+                console.error('Error completing song:', error);
+            }
+        }
+
+        async function skipCurrentSong() {
+            if (confirm('Skip current song and move to next?')) {
+                await completeCurrentSong();
+            }
+        }
+
+        async function cancelEntry(entryId) {
+            if (!confirm('Remove this entry from the queue?')) return;
+
+            try {
+                await fetch(`${CONFIG.API_URL}/api/karaoke/queue/${entryId}`, {
+                    method: 'DELETE'
+                });
+                
+                console.log('✅ Entry cancelled');
+                loadSessionData();
+            } catch (error) {
+                console.error('Error cancelling entry:', error);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        });
+    </script>
+</body>
+</html>
