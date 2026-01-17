@@ -17,6 +17,7 @@ from datetime import datetime
 from django.http import JsonResponse, FileResponse, Http404, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.db import models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
