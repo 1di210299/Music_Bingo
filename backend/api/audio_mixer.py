@@ -11,7 +11,7 @@ from pydub.effects import normalize
 logger = logging.getLogger(__name__)
 
 
-def mix_tts_with_music(tts_bytes, music_bytes, tts_volume=3, music_volume=-12):
+def mix_tts_with_music(tts_bytes, music_bytes, tts_volume=3, music_volume=-8):
     """
     Mix TTS audio with background music
     
@@ -19,7 +19,7 @@ def mix_tts_with_music(tts_bytes, music_bytes, tts_volume=3, music_volume=-12):
         tts_bytes: MP3 bytes of TTS audio
         music_bytes: MP3 bytes of background music
         tts_volume: Volume adjustment for TTS in dB (3 = boosted for clarity)
-        music_volume: Volume adjustment for music in dB (-12 = very soft background)
+        music_volume: Volume adjustment for music in dB (-8 = soft but audible background)
     
     Returns:
         bytes: Mixed audio as MP3
