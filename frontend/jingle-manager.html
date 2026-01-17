@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jingle Manager - Music Bingo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Jingle Manager</h1>
+            <p>Schedule when your jingles play during games</p>
+        </header>
+        
+        <div class="actions">
+            <button id="createScheduleBtn" class="btn btn-primary">+ Create New Schedule</button>
+            <a href="/game.html" class="btn btn-secondary">← Back to Game</a>
+            <a href="/jingle.html" class="btn btn-secondary">→ Jingle Generator</a>
+        </div>
+        
+        <div id="schedulesList" class="schedules-list">
+            <div class="loading">Loading schedules...</div>
+        </div>
+        
+        <!-- Create/Edit Modal -->
+        <div id="scheduleModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Create New Schedule</h2>
+                    <button id="closeModal" class="close-btn">&times;</button>
+                </div>
+                
+                <form id="scheduleForm">
+                    <!-- Jingle Selection -->
+                    <div class="form-group">
+                        <label for="jingleName">Jingle Name *</label>
+                        <input type="text" id="jingleName" required placeholder="e.g., Tuesday Night Taco Promotion">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="jingleFilename">Jingle File *</label>
+                        <select id="jingleFilename" required>
+                            <option value="">-- Select a jingle file --</option>
+                        </select>
+                        <small>Generated jingles from your Jingle Generator</small>
+                    </div>
+                    
+                    <!-- Date Range -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">Start Date *</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endDate">End Date</label>
+                            <input type="date" id="endDate">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="noEndDate">
+                                <span>No end date (runs indefinitely)</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Time Range -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="timeStart">Start Time</label>
+                            <input type="time" id="timeStart">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="allDayCheck">
+                                <span>All day (no time restrictions)</span>
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="timeEnd">End Time</label>
+                            <input type="time" id="timeEnd">
+                            <small>Only if not all day</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Days of Week -->
+                    <div class="form-group">
+                        <label>Days of Week *</label>
+                        <div class="days-selector">
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="monday" id="dayMonday">
+                                <span>Mon</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="tuesday" id="dayTuesday">
+                                <span>Tue</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="wednesday" id="dayWednesday">
+                                <span>Wed</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="thursday" id="dayThursday">
+                                <span>Thu</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="friday" id="dayFriday">
+                                <span>Fri</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="saturday" id="daySaturday">
+                                <span>Sat</span>
+                            </label>
+                            <label class="day-checkbox">
+                                <input type="checkbox" name="days" value="sunday" id="daySunday">
+                                <span>Sun</span>
+                            </label>
+                        </div>
+                        <small>Select at least one day</small>
+                    </div>
+                    
+                    <!-- Repeat Pattern -->
+                    <div class="form-group">
+                        <label>Repeat Pattern *</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="repeatPattern" value="occasional" id="patternOccasional">
+                                <span>
+                                    <strong>Occasional</strong>
+                                    <small>Every 8-10 rounds</small>
+                                </span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="repeatPattern" value="regular" id="patternRegular" checked>
+                                <span>
+                                    <strong>Regular</strong>
+                                    <small>Every 5-7 rounds</small>
+                                </span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="repeatPattern" value="often" id="patternOften">
+                                <span>
+                                    <strong>Often</strong>
+                                    <small>Every 3-4 rounds</small>
+                                </span>
+                            </label>
+                        </div>
+                        <small class="help-text">💡 This determines how frequently your jingle will play during game sessions. Choose based on how prominent you want this promotion to be.</small>
+                    </div>
+                    
+                    <!-- Priority -->
+                    <div class="form-group">
+                        <label for="priority">Priority: <span id="priorityValue">0</span></label>
+                        <input type="range" id="priority" min="0" max="100" value="0" class="slider">
+                        <div class="slider-labels">
+                            <span>0 (Low)</span>
+                            <span>50 (Medium)</span>
+                            <span>100 (High)</span>
+                        </div>
+                        <small>Higher priority jingles play first when multiple are active</small>
+                    </div>
+                    
+                    <!-- Enabled Toggle -->
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="enabled" checked>
+                            <span>Enabled (schedule is active)</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">Save Schedule</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="config.js"></script>
+    <script src="jingle-manager.js"></script>
+</body>
+</html>
