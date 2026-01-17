@@ -7,6 +7,11 @@ let availableJingles = [];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔍 Jingle Manager loaded');
+    console.log('📍 Current URL:', window.location.href);
+    console.log('⚙️ CONFIG.API_URL:', CONFIG.API_URL);
+    console.log('⚙️ CONFIG.BACKEND_URL:', CONFIG.BACKEND_URL);
+    
     loadJingles();
     loadSchedules();
     setupEventListeners();
@@ -73,9 +78,20 @@ function setupEventListeners() {
 // Load available jingles from backend
 async function loadJingles() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}/jingles`);
+        const url = `${CONFIG.API_URL}/jingles`;
+        console.log('📥 Loading jingles from:', url);
+        
+        const response = await fetch(url);
+        console.log('✅ Jingles response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('❌ Failed to load jingles. Status:', response.status);
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
         availableJingles = data.jingles || [];
+        console.log('✅ Loaded jingles:', availableJingles.length, 'items');
         
         // Populate jingle dropdown
         const select = document.getElementById('jingleFilename');
@@ -88,7 +104,7 @@ async function loadJingles() {
             select.appendChild(option);
         });
     } catch (error) {
-        console.error('Error loading jingles:', error);
+        console.error('❌ Error loading jingles:', error);
         showNotification('Failed to load jingles', 'error');
     }
 }
@@ -96,12 +112,23 @@ async function loadJingles() {
 // Load all schedules
 async function loadSchedules() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}/jingle-schedules`);
+        const url = `${CONFIG.API_URL}/jingle-schedules`;
+        console.log('📥 Loading schedules from:', url);
+        
+        const response = await fetch(url);
+        console.log('✅ Schedules response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('❌ Failed to load schedules. Status:', response.status);
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
         schedules = data.schedules || [];
+        console.log('✅ Loaded schedules:', schedules.length, 'items');
         renderSchedules();
     } catch (error) {
-        console.error('Error loading schedules:', error);
+        console.error('❌ Error loading schedules:', error);
         showNotification('Failed to load schedules', 'error');
         document.getElementById('schedulesList').innerHTML = 
             '<div class="error">Failed to load schedules. Please refresh the page.</div>';
