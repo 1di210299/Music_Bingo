@@ -4,6 +4,14 @@
 let schedules = [];
 let editingScheduleId = null;
 let availableJingles = [];
+let currentVenueName = null;
+
+// Get venue from URL params or localStorage
+function getVenueName() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const venue = urlParams.get('venue') || localStorage.getItem('currentVenue') || '';
+    return venue;
+}
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📍 Current URL:', window.location.href);
     console.log('⚙️ CONFIG.API_URL:', CONFIG.API_URL);
     console.log('⚙️ CONFIG.BACKEND_URL:', CONFIG.BACKEND_URL);
+    
+    // Get venue name
+    currentVenueName = getVenueName();
+    console.log('🏢 Current venue:', currentVenueName || '(All venues)');
     
     loadJingles();
     loadSchedules();
@@ -112,7 +124,13 @@ async function loadJingles() {
 // Load all schedules
 async function loadSchedules() {
     try {
-        const url = `${CONFIG.API_URL}/api/jingle-schedules`;
+        let url = `${CONFIG.API_URL}/api/jingle-schedules`;
+        
+        // Add venue filter if set
+        if (currentVenueName) {
+            url += `?venue_name=${encodeURIComponent(currentVenueName)}`;
+        }
+        
         console.log('📥 Loading schedules from:', url);
         
         const response = await fetch(url);
@@ -327,6 +345,7 @@ async function handleSubmit(e) {
     const formData = {
         jingle_name: document.getElementById('jingleName').value.trim(),
         jingle_filename: document.getElementById('jingleFilename').value,
+        venue_name: currentVenueName || '',
         start_date: document.getElementById('startDate').value,
         end_date: document.getElementById('endDate').value || null,
         time_start: document.getElementById('timeStart').value || null,

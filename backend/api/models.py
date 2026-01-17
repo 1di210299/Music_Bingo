@@ -24,6 +24,14 @@ class JingleSchedule(models.Model):
         help_text="Actual audio file (e.g., 'jingle_12345.mp3')"
     )
     
+    # Venue Filter
+    venue_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Optional: Venue name to filter schedules (e.g., 'Admiral Rodney'). Leave empty for all venues."
+    )
+    
     # Date Range
     start_date = models.DateField(
         help_text="First day this jingle becomes active"

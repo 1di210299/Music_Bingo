@@ -314,10 +314,19 @@ async function completeSetup() {
         gameState.venueName = venueName;
         gameState.selectedDecades = selectedDecades;
         localStorage.setItem('venueName', venueName);
+        localStorage.setItem('currentVenue', venueName); // For jingle-manager
         localStorage.setItem('numPlayers', numPlayers.toString());
         localStorage.setItem('voiceId', selectedVoice);
         localStorage.setItem('selectedDecades', JSON.stringify(selectedDecades));
         localStorage.setItem('pubLogo', pubLogo);
+        
+        // Update jingle manager link with venue
+        const jingleManagerLink = document.getElementById('jingleManagerLink');
+        if (jingleManagerLink && venueName !== 'this venue') {
+            jingleManagerLink.href = `/jingle-manager?venue=${encodeURIComponent(venueName)}`;
+        } else {
+            jingleManagerLink.href = '/jingle-manager';
+        }
         localStorage.setItem('socialMedia', socialMediaURL);
         localStorage.setItem('includeQR', includeQR.toString());
         localStorage.setItem('prize4Corners', prize4Corners);
@@ -2062,9 +2071,15 @@ async function loadJinglePlaylist() {
 async function fetchActiveJingles() {
     try {
         const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
-        const url = apiUrl.endsWith('/api') 
+        let url = apiUrl.endsWith('/api') 
             ? `${apiUrl}/jingle-schedules/active` 
             : `${apiUrl}/api/jingle-schedules/active`;
+        
+        // Add venue filter
+        const venueName = gameState.venueName;
+        if (venueName && venueName !== 'this venue') {
+            url += `?venue_name=${encodeURIComponent(venueName)}`;
+        }
         
         const response = await fetch(url);
         

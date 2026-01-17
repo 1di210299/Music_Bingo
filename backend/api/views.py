@@ -895,8 +895,20 @@ def create_jingle_schedule(request):
         try:
             from .models import JingleSchedule
             
-            # Get all schedules ordered by priority
-            all_schedules = JingleSchedule.objects.all().order_by('-priority', '-created_at')
+            # Get venue_name from query params
+            venue_name = request.GET.get('venue_name')
+            
+            # Filter schedules
+            if venue_name:
+                # Get schedules for specific venue OR schedules without venue (global)
+                all_schedules = JingleSchedule.objects.filter(
+                    models.Q(venue_name=venue_name) | models.Q(venue_name__isnull=True) | models.Q(venue_name='')
+                ).order_by('-priority', '-created_at')
+                logger.info(f'Filtering schedules for venue: {venue_name}')
+            else:
+                # Get all schedules
+                all_schedules = JingleSchedule.objects.all().order_by('-priority', '-created_at')
+                logger.info('Returning all schedules (no venue filter)')
             
             schedules_list = []
             for schedule in all_schedules:
@@ -904,6 +916,7 @@ def create_jingle_schedule(request):
                     'id': schedule.id,
                     'jingle_name': schedule.jingle_name,
                     'jingle_filename': schedule.jingle_filename,
+                    'venue_name': schedule.venue_name,
                     'start_date': schedule.start_date.strftime('%Y-%m-%d'),
                     'end_date': schedule.end_date.strftime('%Y-%m-%d') if schedule.end_date else None,
                     'time_start': schedule.time_start.strftime('%H:%M') if schedule.time_start else None,
@@ -1050,10 +1063,14 @@ def create_jingle_schedule(request):
                 'error': 'Priority must be between 0 and 100'
             }, status=400)
         
+        # Get optional venue_name
+        venue_name = data.get('venue_name', '').strip() or None
+        
         # Create JingleSchedule
         schedule = JingleSchedule.objects.create(
             jingle_name=jingle_name,
             jingle_filename=jingle_filename,
+            venue_name=venue_name,
             start_date=start_date_obj,
             end_date=end_date_obj,
             time_start=time_start_obj,
@@ -1117,9 +1134,24 @@ def get_active_jingles(request):
     logger.info(f'Request path: {request.path}')
     try:
         from .models import JingleSchedule
+        from django.db import models as django_models
         
-        # Get all enabled schedules
-        all_schedules = JingleSchedule.objects.filter(enabled=True).order_by('-priority', '-created_at')
+        # Get venue_name from query params
+        venue_name = request.GET.get('venue_name')
+        
+        # Filter schedules by venue
+        if venue_name:
+            # Get schedules for specific venue OR global schedules (no venue set)
+            all_schedules = JingleSchedule.objects.filter(
+                enabled=True
+            ).filter(
+                django_models.Q(venue_name=venue_name) | django_models.Q(venue_name__isnull=True) | django_models.Q(venue_name='')
+            ).order_by('-priority', '-created_at')
+            logger.info(f'Filtering active jingles for venue: {venue_name}')
+        else:
+            # Get all enabled schedules
+            all_schedules = JingleSchedule.objects.filter(enabled=True).order_by('-priority', '-created_at')
+            logger.info('Returning all active jingles (no venue filter)')
         
         # Filter to only active schedules using is_active_now()
         active_schedules = []
