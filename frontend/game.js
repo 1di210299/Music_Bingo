@@ -222,14 +222,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     const savedVenueName = localStorage.getItem('venueName');
     
     if (setupCompleted && savedVenueName) {
-        // Skip setup modal if already configured
-        console.log('✓ Setup already completed, loading game...');
+        // Load venue config from database before initializing game
+        console.log('✓ Setup already completed, loading venue config...');
+        const venueConfig = await loadVenueConfig(savedVenueName);
+        
+        if (venueConfig) {
+            // Restore configuration to localStorage for game to use
+            localStorage.setItem('numPlayers', venueConfig.numPlayers || '25');
+            localStorage.setItem('voiceId', venueConfig.voiceId || 'JBFqnCBsd6RMkjVDRZzb');
+            localStorage.setItem('selectedDecades', venueConfig.selectedDecades || '[]');
+            localStorage.setItem('pubLogo', venueConfig.pubLogo || '');
+            localStorage.setItem('socialMedia', venueConfig.socialUsername || '');
+            localStorage.setItem('includeQR', venueConfig.includeQR || 'false');
+            localStorage.setItem('prize4Corners', venueConfig.prize4Corners || '');
+            localStorage.setItem('prizeFirstLine', venueConfig.prizeFirstLine || '');
+            localStorage.setItem('prizeFullHouse', venueConfig.prizeFullHouse || '');
+            
+            console.log('✅ Venue configuration restored from database');
+        }
+        
         document.getElementById('setupModal').classList.add('hidden');
         await initializeGame();
     } else {
         // Show setup modal
         console.log('⚙️ First time setup required');
-        initializeSetupModal();
+        await initializeSetupModal();
     }
 });
 
