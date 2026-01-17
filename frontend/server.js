@@ -52,6 +52,11 @@ app.get('/jingle', (req, res) => {
   serveHtmlFile(res, 'jingle.html');
 });
 
+app.get('/jingle-manager', (req, res) => {
+  console.log('📄 Request for /jingle-manager - serving jingle-manager.html');
+  serveHtmlFile(res, 'jingle-manager.html');
+});
+
 app.get('/index', (req, res) => {
   console.log('📄 Request for /index - serving index.html');
   serveHtmlFile(res, 'index.html');
@@ -66,6 +71,11 @@ app.get('/game.html', (req, res) => {
 app.get('/jingle.html', (req, res) => {
   console.log('📄 Redirecting /jingle.html -> /jingle');
   res.redirect(301, '/jingle');
+});
+
+app.get('/jingle-manager.html', (req, res) => {
+  console.log('📄 Redirecting /jingle-manager.html -> /jingle-manager');
+  res.redirect(301, '/jingle-manager');
 });
 
 app.get('/index.html', (req, res) => {
@@ -90,6 +100,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`✓ Clean URLs enabled:`);
   console.log(`  - / or /game -> game.html`);
   console.log(`  - /jingle -> jingle.html`);
+  console.log(`  - /jingle-manager -> jingle-manager.html`);
   console.log(`  - /index -> index.html`);
   console.log(`✓ Legacy .html URLs redirect to clean URLs`);
 });
