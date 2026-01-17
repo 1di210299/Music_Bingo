@@ -3,16 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Bingo</title>
-    <link rel="stylesheet" href="styles.css">
-    <script>
-        // Inject backend URL from environment
-        window.BACKEND_URL = 'BACKEND_URL_PLACEHOLDER';
-    </script>
+    <title>Music Entertainment Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+
+        .modes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .mode-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.4s;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.4s;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .mode-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .mode-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .mode-title {
+            font-size: 2em;
+            color: #764ba2;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .mode-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 1.05em;
+        }
+
+        .mode-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .status-live {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-beta {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-soon {
+            background: #6c757d;
+            color: white;
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #764ba2;
+            border: 2px solid #764ba2;
+        }
+
+        .btn-disabled {
+            background: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5em;
+            }
+
+            .tagline {
+                font-size: 1.1em;
+            }
+
+            .modes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Game interface will be loaded here -->
-    <script src="config.js"></script>
-    <script src="game.js"></script>
+    <div class="container">
+        <header>
+            <h1>🎵 Music Entertainment Platform</h1>
+            <p class="tagline">Interactive entertainment for pubs, bars & venues</p>
+        </header>
+
+        <div class="modes-grid">
+            <!-- Music Bingo -->
+            <div class="mode-card">
+                <div class="mode-icon">🎱</div>
+                <h2 class="mode-title">Music Bingo</h2>
+                <span class="mode-status status-live">✓ LIVE</span>
+                <p class="mode-description">
+                    Classic music bingo with AI-powered announcements, customizable cards, and venue branding.
+                </p>
+                <div class="mode-buttons">
+                    <a href="game.html" class="btn btn-primary">Start Music Bingo</a>
+                </div>
+            </div>
+
+            <!-- Karaoke -->
+            <div class="mode-card">
+                <div class="mode-icon">🎤</div>
+                <h2 class="mode-title">Karaoke</h2>
+                <span class="mode-status status-beta">⚡ BETA</span>
+                <p class="mode-description">
+                    Interactive karaoke with queue management. Customers choose songs from their phones!
+                </p>
+                <div class="mode-buttons">
+                    <a href="karaoke-host.html" class="btn btn-primary">Host Control</a>
+                    <a href="karaoke.html" class="btn btn-secondary">Join as Singer</a>
+                </div>
+            </div>
+
+            <!-- Pub Quiz -->
+            <div class="mode-card">
+                <div class="mode-icon">🔔</div>
+                <h2 class="mode-title">Pub Quiz</h2>
+                <span class="mode-status status-soon">🚧 COMING SOON</span>
+                <p class="mode-description">
+                    Interactive quiz with Bluetooth buzzers. First to buzz wins! Fast-paced and exciting.
+                </p>
+                <div class="mode-buttons">
+                    <button class="btn btn-disabled" disabled>Coming Soon</button>
+                </div>
+            </div>
+
+            <!-- Jingle Manager -->
+            <div class="mode-card">
+                <div class="mode-icon">📢</div>
+                <h2 class="mode-title">Jingle Manager</h2>
+                <span class="mode-status status-live">✓ LIVE</span>
+                <p class="mode-description">
+                    Create and schedule custom jingles for promotions, events, and announcements.
+                </p>
+                <div class="mode-buttons">
+                    <a href="jingle-manager/" class="btn btn-primary">Manage Jingles</a>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🎵 Perfect DJ - Professional Entertainment | © 2026</p>
+        </footer>
+    </div>
 </body>
 </html>
