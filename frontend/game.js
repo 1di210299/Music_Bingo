@@ -250,18 +250,32 @@ async function initializeSetupModal() {
     const setupNumPlayers = document.getElementById('setupNumPlayers');
     const setupEstimation = document.getElementById('setupEstimation');
     
+    console.log('🔧 Initializing setup modal...');
+    
     // Load last used venue name
     const savedVenue = localStorage.getItem('venueName');
     if (savedVenue) {
+        console.log(`📂 Found saved venue: ${savedVenue}`);
         setupVenueName.value = savedVenue;
         
         // Try to load venue-specific config
         const venueConfig = await loadVenueConfig(savedVenue);
+        console.log('📋 Loaded config:', venueConfig);
+        
         if (venueConfig) {
             // Restore all venue-specific settings
-            if (venueConfig.numPlayers) setupNumPlayers.value = venueConfig.numPlayers;
-            if (venueConfig.voiceId) document.getElementById('setupVoice').value = venueConfig.voiceId;
+            console.log('🔄 Restoring venue configuration...');
+            
+            if (venueConfig.numPlayers) {
+                console.log('  - Players:', venueConfig.numPlayers);
+                setupNumPlayers.value = venueConfig.numPlayers;
+            }
+            if (venueConfig.voiceId) {
+                console.log('  - Voice:', venueConfig.voiceId);
+                document.getElementById('setupVoice').value = venueConfig.voiceId;
+            }
             if (venueConfig.selectedDecades) {
+                console.log('  - Decades:', venueConfig.selectedDecades);
                 try {
                     const decades = JSON.parse(venueConfig.selectedDecades);
                     document.querySelectorAll('input[name="decades"]').forEach(checkbox => {
@@ -272,25 +286,39 @@ async function initializeSetupModal() {
                 }
             }
             if (venueConfig.pubLogo) {
-                document.getElementById('setupPubLogo').value = venueConfig.pubLogo;
+                console.log('  - Logo:', venueConfig.pubLogo);
+                const logoInput = document.getElementById('setupPubLogo');
+                logoInput.value = venueConfig.pubLogo;
+                console.log('  - Logo input set:', logoInput.value);
                 showLogoPreview(venueConfig.pubLogo);
             }
             if (venueConfig.socialPlatform) {
+                console.log('  - Social platform:', venueConfig.socialPlatform);
                 document.getElementById('socialPlatform').value = venueConfig.socialPlatform;
             }
             if (venueConfig.socialUsername) {
+                console.log('  - Social username:', venueConfig.socialUsername);
                 document.getElementById('setupSocialMedia').value = venueConfig.socialUsername;
             }
             if (venueConfig.includeQR === 'true') {
+                console.log('  - Include QR: true');
                 document.getElementById('setupIncludeQR').checked = true;
                 toggleSocialMediaField();
             }
-            if (venueConfig.prize4Corners) document.getElementById('prize4Corners').value = venueConfig.prize4Corners;
-            if (venueConfig.prizeFirstLine) document.getElementById('prizeFirstLine').value = venueConfig.prizeFirstLine;
-            if (venueConfig.prizeFullHouse) document.getElementById('prizeFullHouse').value = venueConfig.prizeFullHouse;
+            if (venueConfig.prize4Corners) {
+                console.log('  - 4 Corners prize:', venueConfig.prize4Corners);
+                document.getElementById('prize4Corners').value = venueConfig.prize4Corners;
+            }
+            if (venueConfig.prizeFirstLine) {
+                console.log('  - First Line prize:', venueConfig.prizeFirstLine);
+                document.getElementById('prizeFirstLine').value = venueConfig.prizeFirstLine;
+            }
+            if (venueConfig.prizeFullHouse) {
+                console.log('  - Full House prize:', venueConfig.prizeFullHouse);
+                document.getElementById('prizeFullHouse').value = venueConfig.prizeFullHouse;
+            }
             
             console.log('✅ Restored venue-specific configuration');
-            // Don't return - continue to set up listeners
         }
     }
     
