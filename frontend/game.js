@@ -2055,30 +2055,88 @@ async function loadJinglePlaylist() {
 }
 
 /**
+ * Fetch currently active jingle schedules from backend
+ * Backend evaluates: date range, time period, day of week, enabled status
+ * Returns schedules sorted by priority (highest first)
+ */
+async function fetchActiveJingles() {
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL || 'http://localhost:8080';
+        const url = apiUrl.endsWith('/api') 
+            ? `${apiUrl}/jingle-schedules/active` 
+            : `${apiUrl}/api/jingle-schedules/active`;
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.error('Error fetching active jingles:', response.status);
+            return [];
+        }
+        
+        const data = await response.json();
+        return data.active_jingles || [];
+    } catch (error) {
+        console.error('Error fetching active jingles:', error);
+        return [];
+    }
+}
+
+/**
+ * Track jingle play for analytics (optional)
+ */
+async function trackJinglePlay(scheduleId, roundNumber) {
+    try {
+        const apiUrl = CONFIG.API_URL || CONFIG.BACKEND_URL;
+        const url = apiUrl.endsWith('/api') 
+            ? `${apiUrl}/jingle-schedules/${scheduleId}/play` 
+            : `${apiUrl}/api/jingle-schedules/${scheduleId}/play`;
+        
+        await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ round_number: roundNumber })
+        });
+    } catch (error) {
+        console.error('Error tracking jingle play:', error);
+    }
+}
+
+/**
  * Check if a jingle should play and play it
  */
 async function checkAndPlayJingle() {
-    if (!jinglePlaylist.enabled || jinglePlaylist.jingles.length === 0) {
+    // Fetch active schedules from backend
+    const activeSchedules = await fetchActiveJingles();
+    
+    if (activeSchedules.length === 0) {
+        console.log('No active jingle schedules');
         return;
     }
     
     const songsPlayed = gameState.called.length;
     
-    // Play jingle at the specified interval (e.g., every 3 rounds)
-    if (songsPlayed > 0 && songsPlayed % jinglePlaylist.interval === 0) {
-        updateStatus('🎵 Playing jingle...', true);
+    // Check each schedule to see if it should play
+    for (const schedule of activeSchedules) {
+        const shouldPlay = (songsPlayed > 0 && songsPlayed % schedule.interval === 0);
         
-        try {
-            const jingleFilename = jinglePlaylist.jingles[jinglePlaylist.currentIndex];
-            await playJingleAudio(jingleFilename);
+        if (shouldPlay) {
+            console.log(`🎵 Playing scheduled jingle: ${schedule.jingle_name}`);
             
-            // Move to next jingle (cycle through playlist)
-            jinglePlaylist.currentIndex = (jinglePlaylist.currentIndex + 1) % jinglePlaylist.jingles.length;
+            updateStatus('🎵 Playing promotional jingle...', true);
             
-            // Short pause after jingle
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-            console.error('Error playing jingle:', error);
+            try {
+                await playJingleAudio(schedule.jingle_filename);
+                
+                // Track play event (optional)
+                await trackJinglePlay(schedule.id, songsPlayed);
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Only play ONE jingle per round (highest priority wins)
+                break;
+            } catch (error) {
+                console.error('Error playing jingle:', error);
+            }
         }
     }
 }

@@ -197,15 +197,20 @@ function initializeTextInput() {
 function updateCharCount() {
     const textarea = document.getElementById('jingleText');
     const counter = document.getElementById('charCount');
+    
+    // Count WORDS, not characters
+    const words = textarea.value.trim().split(/\s+/).filter(word => word.length > 0).length;
     const count = textarea.value.length;
     
-    counter.textContent = count;
+    counter.textContent = `${count} chars / ${words} words`;
     counter.parentElement.classList.remove('warning', 'error');
     
-    if (count > 120) {
+    // Show warning at 150 words (~75% of 200)
+    if (words > 150) {
         counter.parentElement.classList.add('warning');
     }
-    if (count > 140) {
+    // Show error at 200 words (max limit)
+    if (words > 200) {
         counter.parentElement.classList.add('error');
     }
 }
