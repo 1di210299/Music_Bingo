@@ -42,6 +42,98 @@ let gameState = {
     halfwayAnnounced: false  // Track if halfway announcement was made
 };
 
+// ============================================================================
+// VENUE-SPECIFIC CONFIGURATION STORAGE
+// ============================================================================
+
+/**
+ * Save venue-specific configuration to localStorage
+ * Each venue gets its own configuration namespace
+ */
+function saveVenueConfig(venueName, config) {
+    const venueKey = `venue_${venueName.toLowerCase().replace(/\s+/g, '_')}`;
+    const existingConfigs = JSON.parse(localStorage.getItem('venueConfigs') || '{}');
+    existingConfigs[venueKey] = {
+        ...config,
+        lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem('venueConfigs', JSON.stringify(existingConfigs));
+    console.log(`💾 Saved config for venue: ${venueName}`);
+}
+
+/**
+ * Load venue-specific configuration from localStorage
+ * Returns null if no config exists for this venue
+ */
+function loadVenueConfig(venueName) {
+    const venueKey = `venue_${venueName.toLowerCase().replace(/\s+/g, '_')}`;
+    const existingConfigs = JSON.parse(localStorage.getItem('venueConfigs') || '{}');
+    const config = existingConfigs[venueKey];
+    if (config) {
+        console.log(`📂 Loaded config for venue: ${venueName}`);
+    }
+    return config || null;
+}
+
+/**
+ * Show notification to user (for feedback)
+ */
+function showGameNotification(message, type = 'info') {
+    // Check if notification already exists
+    let notification = document.getElementById('gameNotification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'gameNotification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0;
+            transform: translateY(-10px);
+        `;
+        document.body.appendChild(notification);
+    }
+    
+    // Set colors based on type
+    const colors = {
+        success: 'background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;',
+        error: 'background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white;',
+        info: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;'
+    };
+    
+    notification.style.cssText += colors[type] || colors.info;
+    notification.textContent = message;
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Animate out after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-10px)';
+    }, 3000);
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+/**
+ * Load song pool and announcements on page load
+ */
+// Global flag to prevent game initialization
+let gameInitialized = false;
+
 // Howler instances
 let musicPlayer = null;
 let ttsPlayer = null;
@@ -84,8 +176,48 @@ function initializeSetupModal() {
     const setupNumPlayers = document.getElementById('setupNumPlayers');
     const setupEstimation = document.getElementById('setupEstimation');
     
-    // Load saved values if any
+    // Load last used venue name
     const savedVenue = localStorage.getItem('venueName');
+    if (savedVenue) {
+        setupVenueName.value = savedVenue;
+        
+        // Try to load venue-specific config
+        const venueConfig = loadVenueConfig(savedVenue);
+        if (venueConfig) {
+            // Restore all venue-specific settings
+            if (venueConfig.numPlayers) setupNumPlayers.value = venueConfig.numPlayers;
+            if (venueConfig.voiceId) document.getElementById('setupVoice').value = venueConfig.voiceId;
+            if (venueConfig.selectedDecades) {
+                try {
+                    const decades = JSON.parse(venueConfig.selectedDecades);
+                    document.querySelectorAll('input[name="decades"]').forEach(checkbox => {
+                        checkbox.checked = decades.includes(checkbox.value);
+                    });
+                } catch (e) {
+                    console.warn('Could not restore decade selection:', e);
+                }
+            }
+            if (venueConfig.pubLogo) {
+                document.getElementById('setupPubLogo').value = venueConfig.pubLogo;
+                showLogoPreview(venueConfig.pubLogo);
+            }
+            if (venueConfig.socialMedia) {
+                document.getElementById('setupSocialMedia').value = venueConfig.socialMedia;
+            }
+            if (venueConfig.includeQR === 'true') {
+                document.getElementById('setupIncludeQR').checked = true;
+                toggleSocialMediaField();
+            }
+            if (venueConfig.prize4Corners) document.getElementById('prize4Corners').value = venueConfig.prize4Corners;
+            if (venueConfig.prizeFirstLine) document.getElementById('prizeFirstLine').value = venueConfig.prizeFirstLine;
+            if (venueConfig.prizeFullHouse) document.getElementById('prizeFullHouse').value = venueConfig.prizeFullHouse;
+            
+            console.log('✅ Restored venue-specific configuration');
+            return; // Exit early, config loaded
+        }
+    }
+    
+    // Fallback: load global settings (for backward compatibility)
     const savedPlayers = localStorage.getItem('numPlayers');
     const savedVoice = localStorage.getItem('voiceId');
     const savedDecades = localStorage.getItem('selectedDecades');
@@ -93,7 +225,6 @@ function initializeSetupModal() {
     const savedSocialMedia = localStorage.getItem('socialMedia');
     const savedIncludeQR = localStorage.getItem('includeQR');
     
-    if (savedVenue) setupVenueName.value = savedVenue;
     if (savedPlayers) setupNumPlayers.value = savedPlayers;
     if (savedVoice) document.getElementById('setupVoice').value = savedVoice;
     if (savedPubLogo) {
@@ -103,7 +234,7 @@ function initializeSetupModal() {
     if (savedSocialMedia) document.getElementById('setupSocialMedia').value = savedSocialMedia;
     if (savedIncludeQR === 'true') {
         document.getElementById('setupIncludeQR').checked = true;
-        toggleSocialMediaField(); // Show the field if checkbox was saved as checked
+        toggleSocialMediaField();
     }
     
     // Restore decade checkbox selections
@@ -138,6 +269,42 @@ function initializeSetupModal() {
     });
     setupNumPlayers.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') completeSetup();
+    });
+    
+    // Load venue config when venue name changes (on blur/tab out)
+    setupVenueName.addEventListener('blur', () => {
+        const venueName = setupVenueName.value.trim();
+        if (venueName && venueName !== 'this venue') {
+            const venueConfig = loadVenueConfig(venueName);
+            if (venueConfig) {
+                // Auto-fill form with saved config
+                if (venueConfig.numPlayers) setupNumPlayers.value = venueConfig.numPlayers;
+                if (venueConfig.voiceId) document.getElementById('setupVoice').value = venueConfig.voiceId;
+                if (venueConfig.selectedDecades) {
+                    try {
+                        const decades = JSON.parse(venueConfig.selectedDecades);
+                        document.querySelectorAll('input[name="decades"]').forEach(checkbox => {
+                            checkbox.checked = decades.includes(checkbox.value);
+                        });
+                    } catch (e) {}
+                }
+                if (venueConfig.pubLogo) {
+                    document.getElementById('setupPubLogo').value = venueConfig.pubLogo;
+                    showLogoPreview(venueConfig.pubLogo);
+                }
+                if (venueConfig.socialMedia) document.getElementById('setupSocialMedia').value = venueConfig.socialMedia;
+                if (venueConfig.includeQR === 'true') {
+                    document.getElementById('setupIncludeQR').checked = true;
+                    toggleSocialMediaField();
+                }
+                if (venueConfig.prize4Corners) document.getElementById('prize4Corners').value = venueConfig.prize4Corners;
+                if (venueConfig.prizeFirstLine) document.getElementById('prizeFirstLine').value = venueConfig.prizeFirstLine;
+                if (venueConfig.prizeFullHouse) document.getElementById('prizeFullHouse').value = venueConfig.prizeFullHouse;
+                
+                console.log(`✅ Auto-loaded saved config for: ${venueName}`);
+                showNotification(`📂 Loaded saved settings for ${venueName}`, 'success');
+            }
+        }
     });
 }
 
@@ -310,15 +477,37 @@ async function completeSetup() {
         const prizeFirstLine = document.getElementById('prizeFirstLine')?.value.trim() || '';
         const prizeFullHouse = document.getElementById('prizeFullHouse')?.value.trim() || '';
         
-        // Save settings
+        // Save settings globally (for current session)
         gameState.venueName = venueName;
         gameState.selectedDecades = selectedDecades;
         localStorage.setItem('venueName', venueName);
         localStorage.setItem('currentVenue', venueName); // For jingle-manager
+        localStorage.setItem('setupCompleted', 'true');
+        
+        // Save venue-specific configuration
+        saveVenueConfig(venueName, {
+            venueName: venueName,
+            numPlayers: numPlayers.toString(),
+            voiceId: selectedVoice,
+            selectedDecades: JSON.stringify(selectedDecades),
+            pubLogo: pubLogo,
+            socialMedia: socialMediaURL,
+            includeQR: includeQR.toString(),
+            prize4Corners: prize4Corners,
+            prizeFirstLine: prizeFirstLine,
+            prizeFullHouse: prizeFullHouse
+        });
+        
+        // Also save to global keys for backward compatibility
         localStorage.setItem('numPlayers', numPlayers.toString());
         localStorage.setItem('voiceId', selectedVoice);
         localStorage.setItem('selectedDecades', JSON.stringify(selectedDecades));
         localStorage.setItem('pubLogo', pubLogo);
+        localStorage.setItem('socialMedia', socialMediaURL);
+        localStorage.setItem('includeQR', includeQR.toString());
+        localStorage.setItem('prize4Corners', prize4Corners);
+        localStorage.setItem('prizeFirstLine', prizeFirstLine);
+        localStorage.setItem('prizeFullHouse', prizeFullHouse);
         
         // Update jingle manager link with venue
         const jingleManagerLink = document.getElementById('jingleManagerLink');
@@ -327,12 +516,6 @@ async function completeSetup() {
         } else {
             jingleManagerLink.href = '/jingle-manager';
         }
-        localStorage.setItem('socialMedia', socialMediaURL);
-        localStorage.setItem('includeQR', includeQR.toString());
-        localStorage.setItem('prize4Corners', prize4Corners);
-        localStorage.setItem('prizeFirstLine', prizeFirstLine);
-        localStorage.setItem('prizeFullHouse', prizeFullHouse);
-        localStorage.setItem('setupCompleted', 'true');
         
         // Update main UI inputs
         document.getElementById('venueName').value = venueName;
