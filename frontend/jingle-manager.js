@@ -73,7 +73,7 @@ function setupEventListeners() {
 // Load available jingles from backend
 async function loadJingles() {
     try {
-        const response = await fetch(`${window.API_BASE_URL}/jingles`);
+        const response = await fetch(`${CONFIG.API_URL}/jingles`);
         const data = await response.json();
         availableJingles = data.jingles || [];
         
@@ -96,7 +96,7 @@ async function loadJingles() {
 // Load all schedules
 async function loadSchedules() {
     try {
-        const response = await fetch(`${window.API_BASE_URL}/jingle-schedules`);
+        const response = await fetch(`${CONFIG.API_URL}/jingle-schedules`);
         const data = await response.json();
         schedules = data.schedules || [];
         renderSchedules();
@@ -368,14 +368,14 @@ async function handleSubmit(e) {
         let response;
         if (editingScheduleId) {
             // Update existing schedule
-            response = await fetch(`${window.API_BASE_URL}/jingle-schedules/${editingScheduleId}`, {
+            response = await fetch(`${CONFIG.API_URL}/jingle-schedules/${editingScheduleId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
         } else {
             // Create new schedule
-            response = await fetch(`${window.API_BASE_URL}/jingle-schedules`, {
+            response = await fetch(`${CONFIG.API_URL}/jingle-schedules`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -400,7 +400,7 @@ async function handleSubmit(e) {
 // Toggle schedule enabled/disabled
 async function toggleSchedule(scheduleId, currentEnabled) {
     try {
-        const response = await fetch(`${window.API_BASE_URL}/jingle-schedules/${scheduleId}`, {
+        const response = await fetch(`${CONFIG.API_URL}/jingle-schedules/${scheduleId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled: !currentEnabled })
@@ -427,7 +427,7 @@ async function deleteSchedule(scheduleId) {
     }
     
     try {
-        const response = await fetch(`${window.API_BASE_URL}/jingle-schedules/${scheduleId}/delete`, {
+        const response = await fetch(`${CONFIG.API_URL}/jingle-schedules/${scheduleId}/delete`, {
             method: 'DELETE'
         });
         
