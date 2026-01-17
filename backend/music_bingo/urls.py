@@ -60,11 +60,19 @@ def jingle_manager_view(request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
+    
+    # HTML pages - MUST come before catch-all patterns
+    path("jingle-manager", jingle_manager_view, name="jingle-manager-no-slash"),
     path("jingle-manager/", jingle_manager_view, name="jingle-manager"),
+    path("jingle", jingle_view, name="jingle-no-slash"),
     path("jingle/", jingle_view, name="jingle"),
-    path("", index_view),
+    
+    # Static files
     re_path(r'^(?P<path>game\.js|styles\.css|config\.js|env-loader\.js|jingle\.js|jingle-manager\.js)$', lambda request, path: serve(request, path, document_root=str(FRONTEND_DIR))),
     re_path(r'^assets/(?P<path>.*)$', lambda request, path: serve(request, path, document_root=str(FRONTEND_DIR / 'assets'))),
     re_path(r'^data/(?P<path>.*)$', lambda request, path: serve(request, path, document_root=str(DATA_DIR))),
+    
+    # Index (catch-all) - MUST be last
+    path("", index_view),
 ]
 
