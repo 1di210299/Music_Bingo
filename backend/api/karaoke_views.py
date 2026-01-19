@@ -72,6 +72,9 @@ def create_session(request):
 @api_view(['GET'])
 def get_session(request, venue_name):
     """GET /api/karaoke/session/<venue_name>"""
+    logger.info(f"🎤 KARAOKE: get_session called with venue_name='{venue_name}'")
+    logger.info(f"   Request method: {request.method}")
+    logger.info(f"   Request path: {request.path}")
     try:
         session = KaraokeSession.objects.filter(
             venue_name=venue_name,
