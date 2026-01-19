@@ -1,6 +1,17 @@
 from django.urls import path
 from . import views
-from . import karaoke_views
+
+# Import karaoke views with explicit error handling
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    from . import karaoke_views
+    logger.info("✅ Successfully imported karaoke_views module")
+    logger.info(f"   Available functions: {dir(karaoke_views)}")
+except Exception as e:
+    logger.error(f"❌ Failed to import karaoke_views: {e}")
+    raise
 
 urlpatterns = [
     path('health', views.health_check, name='health'),
