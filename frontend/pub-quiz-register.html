@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Your Team - Perfect DJ Quiz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .registration-container {
+            background: white;
+            max-width: 600px;
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+            font-size: 1em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .genre-selection {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .genre-selection h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .genre-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .genre-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .genre-item:hover {
+            background: #f0f0ff;
+        }
+
+        .genre-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .genre-item.selected {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .social-bonus {
+            background: #fff3cd;
+            border: 2px dashed #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .social-bonus h3 {
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+
+        .social-bonus p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .success-message {
+            display: none;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .success-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .success-message h2 {
+            color: #4caf50;
+            margin-bottom: 15px;
+        }
+
+        .success-message p {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .social-follow {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .info-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .required {
+            color: #f44336;
+        }
+
+        @media (max-width: 600px) {
+            .genre-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="registration-container">
+        <div class="header">
+            <h1>🎤 Join the Quiz! 🎵</h1>
+            <p>Perfect DJ Pub Quiz</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+                <span id="venueName">{{ session.venue_name }}</span>
+            </p>
+        </div>
+
+        <div class="form-container" id="formContainer">
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label>Team Name <span class="required">*</span></label>
+                    <input type="text" id="teamName" name="team_name" required 
+                           placeholder="Enter your creative team name">
+                </div>
+
+                <div class="form-group">
+                    <label>Table Number <span class="required">*</span></label>
+                    <input type="number" id="tableNumber" name="table_number" required 
+                           placeholder="Your table number" min="1">
+                </div>
+
+                <div class="form-group">
+                    <label>Number of Players <span class="required">*</span></label>
+                    <select id="numPlayers" name="num_players" required>
+                        <option value="">Select...</option>
+                        <option value="1">1 Player</option>
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4" selected>4 Players</option>
+                        <option value="5">5 Players</option>
+                        <option value="6">6 Players</option>
+                        <option value="7">7+ Players</option>
+                    </select>
+                    <p class="info-text">Teams of 4-6 work best!</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="email" name="contact_email" 
+                           placeholder="your@email.com">
+                    <p class="info-text">For quiz updates and future events</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Instagram/Social Handle (Optional)</label>
+                    <input type="text" id="socialHandle" name="social_handle" 
+                           placeholder="@yourhandle">
+                </div>
+
+                <div class="social-bonus">
+                    <h3>🎁 Get a FREE Bonus Point!</h3>
+                    <p>Follow @PerfectDJ on Instagram/X and get +1 point!</p>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="followedSocial" name="followed_social">
+                        <label for="followedSocial" style="margin: 0; color: #666;">
+                            I followed @PerfectDJ on social media
+                        </label>
+                    </div>
+                </div>
+
+                <div class="genre-selection">
+                    <h3>📋 Vote for Quiz Genres (Pick up to 5)</h3>
+                    <p class="info-text">Help us choose tonight's quiz topics!</p>
+                    
+                    <div class="genre-grid" id="genreGrid">
+                        {% for genre in genres %}
+                        <div class="genre-item" onclick="toggleGenre(this, {{ genre.id }})">
+                            <input type="checkbox" name="genre_vote" value="{{ genre.id }}" id="genre{{ genre.id }}">
+                            <label for="genre{{ genre.id }}" style="margin: 0; cursor: pointer;">
+                                {{ genre.icon }} {{ genre.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" style="margin-top: 30px;">
+                    🎯 Register Team
+                </button>
+            </form>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            <div class="success-icon">🎉</div>
+            <h2>Registration Successful!</h2>
+            <p><strong id="registeredTeamName">Team Name</strong> is ready to play!</p>
+            <p id="bonusMessage"></p>
+            
+            <div class="social-follow">
+                <h3>📱 Don't Forget!</h3>
+                <p>Follow <strong>@PerfectDJ</strong> for:</p>
+                <ul style="text-align: left; margin: 15px 0; padding-left: 30px;">
+                    <li>Quiz hints during the game</li>
+                    <li>Weekly quiz tips & playlists</li>
+                    <li>Chance to win prizes</li>
+                    <li>Behind-the-scenes DJ content</li>
+                </ul>
+                <p style="font-size: 1.2em; margin-top: 15px;">
+                    Good luck! 🍀
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SESSION_ID = {{ session.id }};
+        let selectedGenres = [];
+        const MAX_GENRES = 5;
+
+        function toggleGenre(element, genreId) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            
+            if (!checkbox.checked && selectedGenres.length >= MAX_GENRES) {
+                alert(`You can only select up to ${MAX_GENRES} genres!`);
+                return;
+            }
+
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                element.classList.add('selected');
+                selectedGenres.push(genreId);
+            } else {
+                element.classList.remove('selected');
+                selectedGenres = selectedGenres.filter(id => id !== genreId);
+            }
+        }
+
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                team_name: document.getElementById('teamName').value,
+                table_number: parseInt(document.getElementById('tableNumber').value),
+                num_players: parseInt(document.getElementById('numPlayers').value),
+                contact_email: document.getElementById('email').value,
+                social_handle: document.getElementById('socialHandle').value,
+                followed_social: document.getElementById('followedSocial').checked,
+                genre_votes: selectedGenres
+            };
+
+            try {
+                const response = await fetch(`/api/pub-quiz/${SESSION_ID}/register-team`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success message
+                    document.getElementById('formContainer').style.display = 'none';
+                    document.getElementById('successMessage').classList.add('show');
+                    document.getElementById('registeredTeamName').textContent = data.team_name;
+                    
+                    if (data.bonus_points > 0) {
+                        document.getElementById('bonusMessage').innerHTML = 
+                            `<strong style="color: #4caf50;">🎁 You earned ${data.bonus_points} bonus point(s)!</strong>`;
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error registering team:', error);
+                alert('Registration failed. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>

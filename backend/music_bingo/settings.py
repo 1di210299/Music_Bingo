@@ -165,3 +165,4 @@ LOGGING = {
 # KARAFUN API CONFIGURATION
 # ============================================================
 KARAFUN_API_TOKEN = os.getenv('KARAFUN_API_TOKEN', 'd7006237dd2b79071487c3a134b3118c2e9921ee2ec8243d35cf852dc718')
+KARAFUN_API_URL = os.getenv('KARAFUN_API_URL', 'https://api.business.karafun.com')

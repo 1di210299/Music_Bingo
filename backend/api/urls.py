@@ -13,6 +13,14 @@ except Exception as e:
     logger.error(f"❌ Failed to import karaoke_views: {e}")
     raise
 
+# Import pub quiz views
+try:
+    from . import pub_quiz_views
+    logger.info("✅ Successfully imported pub_quiz_views module")
+except Exception as e:
+    logger.error(f"❌ Failed to import pub_quiz_views: {e}")
+    pub_quiz_views = None
+
 urlpatterns = [
     path('health', views.health_check, name='health'),
     path('pool', views.get_pool, name='pool'),
@@ -39,6 +47,20 @@ urlpatterns = [
     path('jingle-schedules', views.create_jingle_schedule, name='jingle-schedules'),  # POST: Create, GET: List all
     # Venue Configuration
     path('venue-config/<str:venue_name>', views.venue_config, name='venue-config'),  # GET/POST: Load/save config
+    
+    # ============================================================
+    # PUB QUIZ ENDPOINTS
+    # ============================================================
+    path('pub-quiz/initialize-genres', pub_quiz_views.initialize_quiz_genres, name='pub-quiz-init-genres'),
+    path('pub-quiz/create-session', pub_quiz_views.create_quiz_session, name='pub-quiz-create-session'),
+    path('pub-quiz/<int:session_id>/register-team', pub_quiz_views.register_team, name='pub-quiz-register-team'),
+    path('pub-quiz/<int:session_id>/generate-questions', pub_quiz_views.generate_quiz_questions, name='pub-quiz-generate'),
+    path('pub-quiz/<int:session_id>/start', pub_quiz_views.start_quiz, name='pub-quiz-start'),
+    path('pub-quiz/<int:session_id>/next', pub_quiz_views.next_question, name='pub-quiz-next'),
+    path('pub-quiz/<int:session_id>/current-question', pub_quiz_views.get_current_question, name='pub-quiz-current'),
+    path('pub-quiz/<int:session_id>/leaderboard', pub_quiz_views.get_leaderboard, name='pub-quiz-leaderboard'),
+    path('pub-quiz/<int:session_id>/stats', pub_quiz_views.get_session_stats, name='pub-quiz-stats'),
+    path('pub-quiz/<int:session_id>/qr-code', pub_quiz_views.generate_qr_code, name='pub-quiz-qr'),
     
     # ============================================================
     # KARAOKE ENDPOINTS

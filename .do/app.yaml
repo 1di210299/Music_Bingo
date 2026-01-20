@@ -46,6 +46,9 @@ services:
       - key: OPENAI_API_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: KARAFUN_API_TOKEN
+        scope: RUN_TIME
+        value: "d7006237dd2b79071487c3a134b3118c2e9921ee2ec8243d35cf852dc718"
 
   - name: frontend
     github:
