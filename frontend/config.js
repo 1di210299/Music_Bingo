@@ -10,7 +10,7 @@ const BACKEND_URL = (() => {
     
     // Local development
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5001';
+        return 'http://localhost:8001';
     }
     
     // Same origin (droplet setup) - this shouldn't happen in App Platform

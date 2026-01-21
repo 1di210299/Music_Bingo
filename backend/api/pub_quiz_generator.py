@@ -316,7 +316,7 @@ Return ONLY a valid JSON array with this exact structure:
 ]"""
 
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a professional pub quiz question writer. Generate only valid JSON. No markdown, no code blocks, just pure JSON."},
                     {"role": "user", "content": prompt}

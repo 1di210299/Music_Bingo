@@ -417,6 +417,7 @@
             }
         }
     </style>
+    <script src="/config.js"></script>
 </head>
 
 <body>
@@ -591,7 +592,7 @@
 
         // Global variables
         const SESSION_ID = getSessionId();
-        const BASE_URL = window.BACKEND_URL || '';
+        const BASE_URL = window.BACKEND_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8001' : '');
         let allGenres = [];
         let selectedGenres = [];
         const MAX_GENRES = 5;
@@ -818,13 +819,20 @@
                 sseRetryCount = 0; // Reset retry counter on successful connection
             };
             
-            eventSource.onopen = () => {
-                console.log('✅ SSE Connected');
-            };      console.log('📨 SSE Message:', data.type);
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📨 SSE Message:', data.type);
                     
                     switch(data.type) {
                         case 'connected':
                             console.log(`Connected to session ${data.session_id}`);
+                            break;
+                            
+                        case 'waiting':
+                            // Waiting for questions to be generated
+                            console.log(`⏳ ${data.message}`);
+                            showScreen('waitingScreen');
                             break;
                             
                         case 'question_update':
@@ -860,7 +868,6 @@
             };
             
             eventSource.onerror = (error) => {
-            eventSource.onerror = (error) => {
                 console.error('❌ SSE Connection error:', error);
                 eventSource.close();
                 eventSource = null;
@@ -875,7 +882,8 @@
             };
         }
 
-        function showScreen(id) {zzScreen', 'questionScreen', 'revealScreen'].forEach(s => {
+        function showScreen(id) {
+            ['registrationScreen', 'waitingScreen', 'buzzScreen', 'questionScreen', 'revealScreen'].forEach(s => {
                 const el = document.getElementById(s);
                 if (el) el.style.display = (s === id) ? 'block' : 'none';
             });

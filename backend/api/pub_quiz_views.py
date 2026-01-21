@@ -13,6 +13,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 import json
+import os
 import qrcode
 from io import BytesIO
 import base64
@@ -270,10 +271,15 @@ def generate_qr_code(request, session_id):
 @api_view(['POST'])
 def generate_quiz_questions(request, session_id):
     """Genera preguntas para el quiz basado en votación de géneros"""
+    from django.core.cache import cache
+    
     try:
         session = get_object_or_404(PubQuizSession, id=session_id)
         
-        # Get question type preferences from request
+        # Initialize progress
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 0, 'status': 'starting'}, 300)
+        
+        # Get question type preferences from request body (DRF parses automatically)
         include_mc = request.data.get('include_multiple_choice', True)
         include_written = request.data.get('include_written', True)
         
@@ -299,6 +305,8 @@ def generate_quiz_questions(request, session_id):
         generator = PubQuizGenerator()
         selected_genres = generator.select_genres_by_votes(votes_dict, session.total_rounds)
         
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 10, 'status': 'Selecting genres...'}, 300)
+        
         # Crear estructura de rondas
         structure = generator.create_quiz_structure(
             selected_genres,
@@ -307,8 +315,13 @@ def generate_quiz_questions(request, session_id):
             include_buzzer_round=False
         )
         
-        # Crear rondas en DB
-        for round_data in structure['rounds']:
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 20, 'status': 'Creating quiz structure...'}, 300)
+        
+        # Crear rondas en DB primero (sin preguntas)
+        total_rounds = len(structure['rounds'])
+        rounds_to_generate = []
+        
+        for idx, round_data in enumerate(structure['rounds']):
             genre = QuizGenre.objects.get(name=round_data['genre']['name'])
             
             quiz_round = QuizRound.objects.create(
@@ -320,17 +333,55 @@ def generate_quiz_questions(request, session_id):
                 is_halftime_before=round_data['is_halftime_before'],
             )
             
-            # Generar preguntas con tipos especificados
-            sample_questions = generator.generate_sample_questions(
-                genre.name, 
-                round_data['questions_per_round'],
-                question_types=question_types
-            )
+            rounds_to_generate.append({
+                'round_number': round_data['round_number'],
+                'genre_name': genre.name,
+                'genre_obj': genre,
+                'questions_per_round': round_data['questions_per_round']
+            })
+        
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 30, 'status': 'Generating all questions (this may take 1-2 minutes)...'}, 300)
+        
+        # Generar todas las preguntas en paralelo usando threading
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        def generate_round_questions(round_info):
+            """Generate questions for a single round"""
+            return {
+                'round_number': round_info['round_number'],
+                'genre_obj': round_info['genre_obj'],
+                'questions': generator.generate_sample_questions(
+                    round_info['genre_name'],
+                    round_info['questions_per_round'],
+                    question_types=question_types
+                )
+            }
+        
+        # Generate questions in parallel (max 4 concurrent API calls)
+        all_round_questions = []
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_round = {executor.submit(generate_round_questions, round_info): round_info for round_info in rounds_to_generate}
             
-            for q_data in sample_questions:
+            for idx, future in enumerate(as_completed(future_to_round)):
+                result = future.result()
+                all_round_questions.append(result)
+                
+                # Update progress
+                progress = 30 + int(((idx + 1) / total_rounds) * 60)
+                cache.set(f'quiz_generation_progress_{session_id}', 
+                         {'progress': progress, 'status': f'Generated {idx+1}/{total_rounds} rounds...'}, 300)
+        
+        # Sort by round number
+        all_round_questions.sort(key=lambda x: x['round_number'])
+        
+        # Save all questions to database
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 92, 'status': 'Saving questions to database...'}, 300)
+        
+        for round_data in all_round_questions:
+            for q_data in round_data['questions']:
                 QuizQuestion.objects.create(
                     session=session,
-                    genre=genre,
+                    genre=round_data['genre_obj'],
                     round_number=round_data['round_number'],
                     question_number=q_data['question_number'],
                     question_text=q_data['question'],
@@ -344,6 +395,8 @@ def generate_quiz_questions(request, session_id):
                     hints=q_data.get('hints', ''),
                 )
         
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 90, 'status': 'Finalizing quiz...'}, 300)
+        
         # Actualizar estado de sesión
         session.status = 'ready'
         session.save()
@@ -353,6 +406,8 @@ def generate_quiz_questions(request, session_id):
             genre = QuizGenre.objects.get(name=genre_data['name'])
             session.selected_genres.add(genre)
         
+        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 100, 'status': 'Complete!'}, 300)
+        
         return Response({
             'success': True,
             'message': 'Quiz generado exitosamente',
@@ -361,6 +416,7 @@ def generate_quiz_questions(request, session_id):
         })
     
     except Exception as e:
+        cache.delete(f'quiz_generation_progress_{session_id}')
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -412,7 +468,52 @@ def start_quiz(request, session_id):
         first_round.started_at = timezone.now()
         first_round.save()
     
-    return Response({'success': True, 'status': 'in_progress'})
+    # Mensaje de bienvenida
+    team_count = session.teams.count()
+    welcome_message = (
+        f"Welcome to {session.venue_name}'s Pub Quiz! "
+        f"We have {team_count} teams competing today. "
+        f"Get ready for {session.total_rounds} rounds of trivia fun! "
+        f"Good luck everyone!"
+    )
+    
+    return Response({
+        'success': True, 
+        'status': 'in_progress',
+        'welcome_message': welcome_message
+    })
+
+
+@api_view(['POST'])
+def reset_quiz(request, session_id):
+    """Reinicia completamente el quiz a su estado inicial"""
+    session = get_object_or_404(PubQuizSession, id=session_id)
+    
+    # Borrar todas las respuestas
+    TeamAnswer.objects.filter(team__session=session).delete()
+    
+    # Borrar todas las preguntas
+    QuizQuestion.objects.filter(session=session).delete()
+    
+    # Borrar todas las rondas (esto permite regenerar preguntas)
+    QuizRound.objects.filter(session=session).delete()
+    
+    # Resetear puntajes de equipos
+    for team in session.teams.all():
+        team.total_score = 0
+        team.save()
+    
+    # Resetear sesión al estado inicial
+    session.status = 'registration'
+    session.current_round = 0
+    session.current_question = 0
+    session.save()
+    
+    return Response({
+        'success': True,
+        'message': 'Quiz reset successfully',
+        'status': 'registration'
+    })
 
 
 @api_view(['POST'])
@@ -472,6 +573,9 @@ def quiz_stream(request, session_id):
         # Send initial connection message
         yield f"data: {json.dumps({'type': 'connected', 'session_id': session_id})}\n\n"
         
+        # Send initial state immediately after connection
+        initial_state_sent = False
+        
         while True:
             try:
                 # Refresh session from database
@@ -487,7 +591,8 @@ def quiz_stream(request, session_id):
                 question_changed = (session.current_round != last_round or 
                                   session.current_question != last_question)
                 
-                if status_changed or question_changed:
+                # Send update on first iteration or when changes detected
+                if not initial_state_sent or status_changed or question_changed:
                     # Status changed or new question
                     if session.status in ['in_progress', 'halftime', 'revealing_answer']:
                         question = QuizQuestion.objects.filter(
@@ -538,10 +643,17 @@ def quiz_stream(request, session_id):
                             last_round = session.current_round
                             last_question = session.current_question
                             last_status = session.status
+                            initial_state_sent = True
+                        else:
+                            # No hay pregunta disponible - enviar estado de espera
+                            yield f"data: {json.dumps({{'type': 'waiting', 'message': 'Waiting for questions to be generated', 'status': session.status}})}\n\n"
+                            last_status = session.status
+                            initial_state_sent = True
                     else:
                         # Status changed but quiz not active
                         yield f"data: {json.dumps({'type': 'status_change', 'status': session.status})}\n\n"
                         last_status = session.status
+                        initial_state_sent = True
                 
                 # Send heartbeat every 15 seconds to keep connection alive
                 yield f": heartbeat\n\n"
@@ -560,6 +672,142 @@ def quiz_stream(request, session_id):
     )
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
+    return response
+
+
+@csrf_exempt
+def host_stream(request, session_id):
+    """
+    SSE endpoint for host panel - provides stats, leaderboard, and question updates
+    """
+    from django.core.cache import cache
+    
+    def event_generator():
+        """Generator for host-specific updates"""
+        session = get_object_or_404(PubQuizSession, id=session_id)
+        last_update_time = timezone.now()
+        last_status = session.status
+        last_round = session.current_round
+        last_question = session.current_question
+        last_progress = None
+        
+        # Send initial connection message
+        yield f"data: {json.dumps({'type': 'connected', 'session_id': session_id})}\n\n"
+        
+        while True:
+            try:
+                # Check for generation progress
+                progress_data = cache.get(f'quiz_generation_progress_{session_id}')
+                if progress_data and progress_data != last_progress:
+                    yield f"data: {json.dumps({'type': 'generation_progress', 'progress': progress_data['progress'], 'status': progress_data['status']})}\n\n"
+                    last_progress = progress_data
+                
+                # Refresh session
+                session.refresh_from_db()
+                
+                # Check if session ended
+                if session.status == 'completed':
+                    yield f"data: {json.dumps({'type': 'ended', 'message': 'Session completed'})}\n\n"
+                    break
+                
+                # Detect changes
+                status_changed = session.status != last_status
+                question_changed = (session.current_round != last_round or 
+                                  session.current_question != last_question)
+                
+                # Send updates every 3 seconds or when changes detected
+                current_time = timezone.now()
+                time_diff = (current_time - last_update_time).total_seconds()
+                
+                if status_changed or question_changed or time_diff >= 3:
+                    # Get stats
+                    teams = session.teams.all()
+                    total_teams = teams.count()
+                    teams_answered = 0
+                    questions_generated = QuizQuestion.objects.filter(session=session).exists()
+                    
+                    if session.status == 'in_progress':
+                        current_q = QuizQuestion.objects.filter(
+                            session=session,
+                            round_number=session.current_round,
+                            question_number=session.current_question
+                        ).first()
+                        if current_q:
+                            teams_answered = TeamAnswer.objects.filter(question=current_q).count()
+                    
+                    # Get leaderboard
+                    leaderboard = []
+                    for team in teams.order_by('-total_score', 'team_name'):
+                        leaderboard.append({
+                            'team_name': team.team_name,
+                            'total_score': team.total_score,
+                            'table_number': team.table_number
+                        })
+                    
+                    # Get current question details if quiz is active
+                    question_data = None
+                    if session.status in ['in_progress', 'halftime', 'revealing_answer']:
+                        question = QuizQuestion.objects.filter(
+                            session=session,
+                            round_number=session.current_round,
+                            question_number=session.current_question
+                        ).first()
+                        
+                        if question:
+                            question_data = {
+                                'id': question.id,
+                                'text': question.question_text,
+                                'answer': question.correct_answer if session.status == 'revealing_answer' else None,
+                                'fun_fact': question.fun_fact if session.status == 'revealing_answer' else None,
+                                'round': question.round_number,
+                                'number': question.question_number,
+                                'type': question.question_type,
+                                'points': question.points,
+                                'options': question.options if question.question_type == 'multiple_choice' else None
+                            }
+                    
+                    # Send combined update
+                    data = {
+                        'type': 'host_update',
+                        'stats': {
+                            'total_teams': total_teams,
+                            'teams_answered': teams_answered,
+                            'status': session.status,
+                            'current_round': session.current_round,
+                            'current_question': session.current_question,
+                            'total_rounds': session.total_rounds,
+                            'questions_per_round': session.questions_per_round,
+                            'questions_generated': questions_generated
+                        },
+                        'leaderboard': leaderboard,
+                        'question': question_data,
+                        'timestamp': current_time.isoformat()
+                    }
+                    
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_update_time = current_time
+                    last_status = session.status
+                    last_round = session.current_round
+                    last_question = session.current_question
+                
+                # Heartbeat
+                yield f": heartbeat\n\n"
+                
+                # Wait 1 second before next check
+                time.sleep(1)
+                
+            except Exception as e:
+                logger.error(f"Host SSE error for session {session_id}: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                break
+    
+    response = StreamingHttpResponse(
+        event_generator(),
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
     return response
 
 
@@ -652,54 +900,8 @@ def record_buzz(request, question_id):
 # LEADERBOARD Y ESTADÍSTICAS
 # ============================================================================
 
-@api_view(['GET'])
-def get_leaderboard(request, session_id):
-    """Obtiene el ranking actual de equipos"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
-    teams = session.teams.all().order_by('-total_score', '-bonus_points', 'team_name')
-    
-    leaderboard = []
-    for i, team in enumerate(teams, 1):
-        leaderboard.append({
-            'id': team.id,  # Necesario para award points
-            'position': i,
-            'team_name': team.team_name,
-            'table_number': team.table_number,
-            'total_score': team.total_score,
-            'bonus_points': team.bonus_points,
-            'final_score': team.final_score,
-            'social_handle': team.social_handle,
-        })
-    
-    return Response({
-        'success': True,
-        'leaderboard': leaderboard,
-        'total_teams': len(leaderboard)
-    })
-
-
-@api_view(['GET'])
-def get_session_stats(request, session_id):
-    """Estadísticas de la sesión"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
-    
-    # Resumen de votos por género
-    votes = GenreVote.objects.filter(team__session=session).values('genre__name').annotate(count=Count('id')).order_by('-count')
-    genre_votes_summary = {item['genre__name']: item['count'] for item in votes}
-
-    stats = {
-        'total_teams': session.teams.count(),
-        'total_players': sum(team.num_players for team in session.teams.all()),
-        'social_followers': session.teams.filter(followed_social=True).count(),
-        'current_round': session.current_round,
-        'total_rounds': session.total_rounds,
-        'progress_percent': (session.current_round / session.total_rounds * 100) if session.total_rounds > 0 else 0,
-        'status': session.status,
-        'selected_genres': [g.name for g in session.selected_genres.all()],
-        'genre_votes_summary': genre_votes_summary,
-    }
-    
-    return Response({'success': True, 'stats': stats})
+# Removed: get_leaderboard - replaced by SSE host_stream
+# Removed: get_session_stats - replaced by SSE host_stream
 
 
 # ============================================================================
@@ -791,3 +993,72 @@ def initialize_quiz_genres(request):
         })
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============================================================================
+# TTS (Text-to-Speech)
+# ============================================================================
+
+@api_view(['POST'])
+def generate_quiz_tts(request):
+    """Genera audio TTS para preguntas del quiz usando ElevenLabs"""
+    import requests
+    
+    ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', '')
+    
+    # Voice IDs de ElevenLabs
+    VOICE_MAP = {
+        'daniel': 'onwK4e9ZLuTAKqWW03F9',      # Daniel (Male British)
+        'charlotte': '21m00Tcm4TlvDq8ikWAM',   # Charlotte (Female British) 
+        'callum': 'N2lVS1w4EtoT3dr4eOWO',      # Callum (Male British)
+        'alice': 'Xb7hH8MSUJpSbSDYk0k2'        # Alice (Female British)
+    }
+    
+    if not ELEVENLABS_API_KEY:
+        return Response({'error': 'ElevenLabs API key not configured'}, status=500)
+    
+    try:
+        text = request.data.get('text', '')
+        voice_id_name = request.data.get('voice_id', 'daniel')
+        
+        if not text:
+            return Response({'error': 'No text provided'}, status=400)
+        
+        # Obtener voice ID real
+        voice_id = VOICE_MAP.get(voice_id_name, VOICE_MAP['daniel'])
+        
+        url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}'
+        
+        response = requests.post(
+            url,
+            headers={
+                'xi-api-key': ELEVENLABS_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            json={
+                'text': text,
+                'model_id': 'eleven_turbo_v2_5',
+                'voice_settings': {
+                    'stability': 0.35,
+                    'similarity_boost': 0.85,
+                    'style': 0.5,
+                    'use_speaker_boost': True
+                },
+                'optimize_streaming_latency': 1,
+                'output_format': 'mp3_44100_128'
+            },
+            timeout=30
+        )
+        
+        if not response.ok:
+            logger.error(f'ElevenLabs API error: {response.status_code} - {response.text}')
+            return Response({
+                'error': f'ElevenLabs API error: {response.status_code}',
+                'details': response.text
+            }, status=response.status_code)
+        
+        return HttpResponse(response.content, content_type='audio/mpeg')
+        
+    except Exception as e:
+        logger.error(f'TTS generation error: {e}')
+        return Response({'error': str(e)}, status=500)

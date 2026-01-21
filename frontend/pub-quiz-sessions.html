@@ -295,6 +295,7 @@
             }
         }
     </style>
+    <script src="/config.js"></script>
 </head>
 <body>
     <div class="container">
@@ -368,7 +369,7 @@
     </div>
 
     <script>
-        const BASE_URL = window.BACKEND_URL || '';
+        const BASE_URL = window.BACKEND_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8001' : '');
         let currentFilter = 'all';
 
         // Load sessions on page load
