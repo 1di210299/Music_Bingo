@@ -567,37 +567,55 @@
     <script>
         // Get SESSION_ID from URL query parameter or pathname
         function getSessionId() {
+            console.log('🔍 Getting Session ID from URL:', window.location.href);
             // Try query parameter first: ?session=123
             const urlParams = new URLSearchParams(window.location.search);
             const querySession = urlParams.get('session');
-            if (querySession) return querySession;
+            console.log('   Query param session:', querySession);
+            if (querySession) {
+                console.log('✅ Using query session:', querySession);
+                return querySession;
+            }
             
             // Try from pathname: /pub-quiz/123 or /123
             const pathParts = window.location.pathname.split('/').filter(p => p);
+            console.log('   Path parts:', pathParts);
             const lastPart = pathParts[pathParts.length - 1];
+            console.log('   Last part:', lastPart);
             
             // If last part is a number, use it
-            if (!isNaN(lastPart) && lastPart !== '') return lastPart;
+            if (!isNaN(lastPart) && lastPart !== '') {
+                console.log('✅ Using last part as session:', lastPart);
+                return lastPart;
+            }
             
             // If there's a part before .html that's a number
             for (let i = pathParts.length - 1; i >= 0; i--) {
                 if (!isNaN(pathParts[i]) && pathParts[i] !== '') {
+                    console.log('✅ Found session in path:', pathParts[i]);
                     return pathParts[i];
                 }
             }
             
             // Fallback: use default session
+            console.warn('⚠️ No session found, using fallback: 1');
             return '1';
         }
 
         // Global variables
         const SESSION_ID = getSessionId();
         const BASE_URL = window.BACKEND_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8001' : '');
+        console.log('🌐 Global variables initialized:');
+        console.log('   SESSION_ID:', SESSION_ID);
+        console.log('   BASE_URL:', BASE_URL);
+        console.log('   localStorage key:', `pub_quiz_team_${SESSION_ID}`);
+        
         let allGenres = [];
         let selectedGenres = [];
         const MAX_GENRES = 5;
         
         let teamId = localStorage.getItem(`pub_quiz_team_${SESSION_ID}`);
+        console.log('💾 localStorage teamId:', teamId);
         let currentQuestionId = null;
         let lastKnownStatus = null;
         let lastKnownQuestionNum = 0;
@@ -613,12 +631,15 @@
                 showGame();
             } else {
                 console.log('📝 No team registered, showing registration form');
+                console.log('🔗 Fetching session details from:', `${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                 try {
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
+                    console.log('📡 Response status:', response.status, response.statusText);
                     const data = await response.json();
                     console.log('📊 Session data loaded:', data);
                     console.log('🎭 Genres received:', data.genres);
                     console.log('🎭 Number of genres:', data.genres?.length || 0);
+                    console.log('🎭 First genre example:', data.genres?.[0]);
                     
                     document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
                     allGenres = data.genres || [];
@@ -675,14 +696,16 @@
         document.addEventListener('DOMContentLoaded', init);
 
         function renderGenres(genresList) {
+            console.log('🎨 renderGenres() called with', genresList.length, 'genres');
             const genreGrid = document.getElementById('genreGrid');
-            console.log(`🎨 Rendering ${genresList.length} genres`);
+            console.log('   genreGrid element:', genreGrid ? 'found' : 'NOT FOUND');
             
             if (!genreGrid) {
                 console.error('❌ genreGrid element not found!');
                 return;
             }
             
+            console.log('   Building HTML for genres...');
             genreGrid.innerHTML = genresList.map(genre => `
                 <div class="genre-item ${selectedGenres.includes(genre.id) ? 'selected' : ''}" onclick="toggleGenre(this, ${genre.id})">
                     <input type="checkbox" name="genre_vote" value="${genre.id}" id="genre${genre.id}" ${selectedGenres.includes(genre.id) ? 'checked' : ''}>
@@ -723,8 +746,12 @@
         }
 
         function showGame() {
+            console.log('🎮 showGame() called');
+            console.log('   Hiding formContainer');
             document.getElementById('formContainer').style.display = 'none';
+            console.log('   Hiding successMessage');
             document.getElementById('successMessage').style.display = 'none';
+            console.log('   Showing gameContainer');
             document.getElementById('gameContainer').style.display = 'block';
             
             // Check session status first
