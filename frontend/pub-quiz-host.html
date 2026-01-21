@@ -415,6 +415,18 @@
                 <option value="alice">Alice (Female British)</option>
             </select>
 
+            <div class="stat-label" style="margin-bottom: 10px;">📝 Question Types Mix</div>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer;">
+                    <input type="checkbox" id="includeMultipleChoice" checked style="width: 20px; height: 20px;">
+                    <span>Multiple Choice (70%)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="includeWritten" checked style="width: 20px; height: 20px;">
+                    <span>Written Answer (30%)</span>
+                </label>
+            </div>
+
             <div class="host-controls">
                 <button onclick="startQuiz()" class="btn btn-primary" id="btnStart">
                     <span>▶️ Start Quiz</span>
@@ -709,8 +721,21 @@
             if (!confirm('Generate quiz questions based on team votes?')) return;
 
             try {
+                const includeMultipleChoice = document.getElementById('includeMultipleChoice').checked;
+                const includeWritten = document.getElementById('includeWritten').checked;
+                
+                if (!includeMultipleChoice && !includeWritten) {
+                    alert('Please select at least one question type!');
+                    return;
+                }
+                
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/generate-questions`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        include_multiple_choice: includeMultipleChoice,
+                        include_written: includeWritten
+                    })
                 });
                 const data = await response.json();
 

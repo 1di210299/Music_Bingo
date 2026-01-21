@@ -269,6 +269,21 @@ def generate_quiz_questions(request, session_id):
     try:
         session = get_object_or_404(PubQuizSession, id=session_id)
         
+        # Get question type preferences from request
+        include_mc = request.data.get('include_multiple_choice', True)
+        include_written = request.data.get('include_written', True)
+        
+        # Calculate ratios
+        question_types = {}
+        if include_mc and include_written:
+            question_types = {'multiple_choice': 0.7, 'written': 0.3}
+        elif include_mc:
+            question_types = {'multiple_choice': 1.0, 'written': 0.0}
+        elif include_written:
+            question_types = {'multiple_choice': 0.0, 'written': 1.0}
+        else:
+            question_types = {'multiple_choice': 0.7, 'written': 0.3}
+        
         # Contar votos por género
         genre_votes = GenreVote.objects.filter(team__session=session).values('genre_id').annotate(
             vote_count=Count('genre_id')
@@ -301,11 +316,11 @@ def generate_quiz_questions(request, session_id):
                 is_halftime_before=round_data['is_halftime_before'],
             )
             
-            # Aquí iría la integración con IA para generar preguntas reales
-            # Por ahora, usar samples
+            # Generar preguntas con tipos especificados
             sample_questions = generator.generate_sample_questions(
                 genre.name, 
-                round_data['questions_per_round']
+                round_data['questions_per_round'],
+                question_types=question_types
             )
             
             for q_data in sample_questions:
@@ -318,6 +333,9 @@ def generate_quiz_questions(request, session_id):
                     correct_answer=q_data['answer'],
                     alternative_answers=q_data.get('alternative_answers', []),
                     difficulty=q_data.get('difficulty', 'medium'),
+                    question_type=q_data.get('question_type', 'written'),
+                    options=q_data.get('options', {}),
+                    correct_option=q_data.get('correct_option', ''),
                     fun_fact=q_data.get('fun_fact', ''),
                     hints=q_data.get('hints', ''),
                 )
