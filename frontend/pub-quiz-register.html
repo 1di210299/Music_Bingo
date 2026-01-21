@@ -617,7 +617,7 @@
             startPolling();
         }
 
-        function editRegistration() {
+        async function editRegistration() {
             // Detener polling si está activo
             if (pollInterval) {
                 clearInterval(pollInterval);
@@ -629,10 +629,22 @@
             document.getElementById('successMessage').style.display = 'none';
             document.getElementById('formContainer').style.display = 'block';
             
+            // Si no hay géneros cargados, cargarlos primero
+            if (allGenres.length === 0) {
+                try {
+                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
+                    const data = await response.json();
+                    allGenres = data.genres;
+                    renderGenres(allGenres);
+                } catch (error) {
+                    console.error('Error loading genres:', error);
+                }
+            }
+            
             // Cargar datos actuales del equipo
             const savedTeamName = localStorage.getItem(`pub_quiz_team_name_${SESSION_ID}`);
             if (savedTeamName) {
-                checkExistingTeam(savedTeamName);
+                await checkExistingTeam(savedTeamName);
             }
         }
 
