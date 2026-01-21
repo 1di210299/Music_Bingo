@@ -614,9 +614,11 @@
                     const data = await response.json();
                     console.log('📊 Session data loaded:', data);
                     console.log('🎭 Genres received:', data.genres);
+                    console.log('🎭 Number of genres:', data.genres?.length || 0);
                     
                     document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
-                    allGenres = data.genres;
+                    allGenres = data.genres || [];
+                    console.log('🎭 allGenres variable set:', allGenres.length);
                     
                     if (!allGenres || allGenres.length === 0) {
                         console.error('❌ No genres loaded!');
