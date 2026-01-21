@@ -124,29 +124,89 @@ def get_session_details(request, session_id):
     })
 
 
+@api_view(['GET'])
+def check_existing_team(request, session_id):
+    """Verifica si un equipo ya existe en la sesión y devuelve sus datos"""
+    try:
+        session = get_object_or_404(PubQuizSession, id=session_id)
+        team_name = request.GET.get('team_name', '')
+        
+        if not team_name:
+            return Response({'exists': False})
+        
+        team = QuizTeam.objects.filter(session=session, team_name=team_name).first()
+        
+        if team:
+            # Obtener votos de géneros
+            genre_votes = GenreVote.objects.filter(team=team).order_by('priority').values_list('genre_id', flat=True)
+            
+            return Response({
+                'exists': True,
+                'team': {
+                    'team_name': team.team_name,
+                    'table_number': team.table_number,
+                    'num_players': team.num_players,
+                    'social_handle': team.social_handle,
+                    'followed_social': team.followed_social,
+                    'genre_votes': list(genre_votes)
+                }
+            })
+        else:
+            return Response({'exists': False})
+            
+    except Exception as e:
+        return Response({'exists': False, 'error': str(e)})
+
+
 @api_view(['POST'])
 def register_team(request, session_id):
-    """Registra un nuevo equipo en la sesión"""
+    """Registra un nuevo equipo en la sesión o actualiza uno existente"""
     try:
         session = get_object_or_404(PubQuizSession, id=session_id)
         data = request.data
+        team_name = data.get('team_name')
         
-        # Crear equipo
-        team = QuizTeam.objects.create(
-            session=session,
-            team_name=data.get('team_name'),
-            table_number=data.get('table_number'),
-            num_players=data.get('num_players', 4),
-            contact_email=data.get('contact_email', ''),
-            contact_phone=data.get('contact_phone', ''),
-            social_handle=data.get('social_handle', ''),
-            followed_social=data.get('followed_social', False),
-        )
+        # Buscar si ya existe un equipo con este nombre en esta sesión
+        existing_team = QuizTeam.objects.filter(session=session, team_name=team_name).first()
         
-        # Bonus por seguir redes sociales
-        if team.followed_social:
-            team.bonus_points = 1
+        if existing_team:
+            # Actualizar equipo existente
+            team = existing_team
+            team.table_number = data.get('table_number')
+            team.num_players = data.get('num_players', 4)
+            team.contact_email = data.get('contact_email', '')
+            team.contact_phone = data.get('contact_phone', '')
+            team.social_handle = data.get('social_handle', '')
+            team.followed_social = data.get('followed_social', False)
+            
+            # Actualizar bonus si ahora sigue redes sociales
+            if team.followed_social and team.bonus_points == 0:
+                team.bonus_points = 1
+            
             team.save()
+            
+            # Eliminar votos anteriores y crear nuevos
+            GenreVote.objects.filter(team=team).delete()
+            message = '¡Registro actualizado!'
+        else:
+            # Crear nuevo equipo
+            team = QuizTeam.objects.create(
+                session=session,
+                team_name=team_name,
+                table_number=data.get('table_number'),
+                num_players=data.get('num_players', 4),
+                contact_email=data.get('contact_email', ''),
+                contact_phone=data.get('contact_phone', ''),
+                social_handle=data.get('social_handle', ''),
+                followed_social=data.get('followed_social', False),
+            )
+            
+            # Bonus por seguir redes sociales
+            if team.followed_social:
+                team.bonus_points = 1
+                team.save()
+            
+            message = '¡Equipo registrado! Sigan @PerfectDJ para más diversión!'
         
         # Registrar votos de géneros (top 3-5)
         genre_votes = data.get('genre_votes', [])
@@ -166,7 +226,7 @@ def register_team(request, session_id):
             'team_id': team.id,
             'team_name': team.team_name,
             'bonus_points': team.bonus_points,
-            'message': '¡Equipo registrado! Sigan @PerfectDJ para más diversión!'
+            'message': message
         }, status=status.HTTP_201_CREATED)
     
     except Exception as e:

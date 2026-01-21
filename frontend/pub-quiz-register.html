@@ -515,9 +515,45 @@
                     document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
                     allGenres = data.genres;
                     renderGenres(allGenres);
+                    
+                    // Detectar si hay un equipo previo guardado (por nombre, no por teamId)
+                    const savedTeamName = localStorage.getItem(`pub_quiz_team_name_${SESSION_ID}`);
+                    if (savedTeamName) {
+                        await checkExistingTeam(savedTeamName);
+                    }
                 } catch (error) {
                     console.error('Error loading session details:', error);
                 }
+            }
+        }
+
+        async function checkExistingTeam(teamName) {
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/check-team?team_name=${encodeURIComponent(teamName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.exists) {
+                        // Pre-llenar formulario con datos existentes
+                        document.getElementById('teamName').value = data.team.team_name;
+                        document.getElementById('tableNumber').value = data.team.table_number || '';
+                        document.getElementById('numPlayers').value = data.team.num_players || 4;
+                        document.getElementById('socialHandle').value = data.team.social_handle || '';
+                        document.getElementById('followedSocial').checked = data.team.followed_social || false;
+                        
+                        // Pre-seleccionar géneros votados
+                        selectedGenres = data.team.genre_votes || [];
+                        renderGenres(allGenres);
+                        
+                        // Mostrar mensaje de edición
+                        const registerCard = document.querySelector('.register-card');
+                        const editBanner = document.createElement('div');
+                        editBanner.style.cssText = 'background: rgba(255,193,7,0.2); padding: 12px; border-radius: 10px; margin-bottom: 20px; text-align: center; color: #ffc107; font-weight: 600;';
+                        editBanner.innerHTML = '✏️ Editando registro existente';
+                        registerCard.insertBefore(editBanner, registerCard.firstChild);
+                    }
+                }
+            } catch (error) {
+                console.log('No previous registration found');
             }
         }
 
@@ -696,6 +732,7 @@
                 if (data.success) {
                     teamId = data.team_id;
                     localStorage.setItem(`pub_quiz_team_${SESSION_ID}`, teamId);
+                    localStorage.setItem(`pub_quiz_team_name_${SESSION_ID}`, formData.team_name);
                     showGame();
                 } else {
                     alert('Error: ' + data.error);
