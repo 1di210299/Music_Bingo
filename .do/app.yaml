@@ -64,4 +64,4 @@ services:
     envs:
       - key: BACKEND_URL
         scope: RUN_TIME
-        value: ""  # Empty string - use relative paths, ingress rules route /api/* to backend
+        value: ${backend.PUBLIC_URL}  # Use backend service's public URL
