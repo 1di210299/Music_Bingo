@@ -548,6 +548,142 @@
         let currentQuestion = null;
         let showingAnswer = false;
         let updateInterval = null;
+        let questionsGenerated = false;
+
+        // Control button states based on quiz status
+        function updateButtonStates(status) {
+            const btnStart = document.getElementById('btnStart');
+            const btnGenerate = document.querySelector('button[onclick="generateQuestions()"]');
+            const btnShowAnswer = document.getElementById('btnShowAnswer');
+            const btnNext = document.getElementById('btnNext');
+            const btnTTS = document.querySelector('button[onclick="playTTS()"]');
+            const btnEnd = document.querySelector('button[onclick="endQuiz()"]');
+
+            console.log(`[BUTTON_CONTROL] Updating buttons for status: ${status}, questionsGenerated: ${questionsGenerated}`);
+
+            switch(status) {
+                case 'registration':
+                    // Phase 1: REGISTRATION - only QR and Generate are available
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = false;
+                    btnGenerate.style.opacity = '1';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+
+                case 'ready':
+                    // Phase 2: READY - questions generated, can start quiz
+                    btnStart.disabled = !questionsGenerated;
+                    btnStart.style.opacity = questionsGenerated ? '1' : '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+
+                case 'in_progress':
+                case 'halftime':
+                    // Phase 3: ACTIVE - all quiz controls available
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = false;
+                    btnNext.disabled = false;
+                    btnTTS.disabled = false;
+                    btnEnd.disabled = false;
+                    btnEnd.style.opacity = '1';
+                    break;
+
+                case 'completed':
+                    // Phase 4: COMPLETED - quiz finished
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+            }
+        }
+        let questionsGenerated = false;
+
+        // Control button states based on quiz status
+        function updateButtonStates(status) {
+            const btnStart = document.getElementById('btnStart');
+            const btnGenerate = document.querySelector('button[onclick="generateQuestions()"]');
+            const btnShowAnswer = document.getElementById('btnShowAnswer');
+            const btnNext = document.getElementById('btnNext');
+            const btnTTS = document.querySelector('button[onclick="playTTS()"]');
+            const btnEnd = document.querySelector('button[onclick="endQuiz()"]');
+
+            console.log(`[BUTTON_CONTROL] Updating buttons for status: ${status}, questionsGenerated: ${questionsGenerated}`);
+
+            switch(status) {
+                case 'registration':
+                    // Phase 1: REGISTRATION - only QR and Generate are available
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = false;
+                    btnGenerate.style.opacity = '1';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+
+                case 'ready':
+                    // Phase 2: READY - questions generated, can start quiz
+                    btnStart.disabled = !questionsGenerated;
+                    btnStart.style.opacity = questionsGenerated ? '1' : '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+
+                case 'in_progress':
+                case 'halftime':
+                    // Phase 3: ACTIVE - all quiz controls available
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = false;
+                    btnNext.disabled = false;
+                    btnTTS.disabled = false;
+                    btnEnd.disabled = false;
+                    btnEnd.style.opacity = '1';
+                    break;
+
+                case 'completed':
+                    // Phase 4: COMPLETED - quiz finished
+                    btnStart.disabled = true;
+                    btnStart.style.opacity = '0.5';
+                    btnGenerate.disabled = true;
+                    btnGenerate.style.opacity = '0.5';
+                    btnShowAnswer.disabled = true;
+                    btnNext.disabled = true;
+                    btnTTS.disabled = true;
+                    btnEnd.disabled = true;
+                    btnEnd.style.opacity = '0.5';
+                    break;
+            }
+        }
 
         // Fetch initial data
         async function init() {
@@ -574,9 +710,7 @@
                 updateStats();
                 updateLeaderboard();
                 
-                // Deshabilitar Start hasta que se generen preguntas
-                document.getElementById('btnStart').disabled = true;
-                document.getElementById('btnStart').style.opacity = '0.5';
+                // Initial button states will be set by updateStats()
 
                 // Auto-refresh - solo stats y leaderboard siempre
                 // loadCurrentQuestion se llama solo cuando hay quiz activo
@@ -584,15 +718,15 @@
                     updateStats();
                     updateLeaderboard();
                     
-                    // Solo hacer polling de preguntas si el status NO es 'registration'
+                    // Solo hacer polling de preguntas si el quiz está activo (in_progress o halftime)
                     const statusBadge = document.getElementById('statusBadge').textContent;
                     console.log(`[POLLING] Status badge text: "${statusBadge}"`);
                     
-                    if (!statusBadge.includes('REGISTRATION')) {
-                        console.log('[POLLING] ✅ Status is NOT registration - calling loadCurrentQuestion()');
+                    if (statusBadge.includes('IN PROGRESS') || statusBadge.includes('HALFTIME')) {
+                        console.log('[POLLING] ✅ Quiz is active - calling loadCurrentQuestion()');
                         loadCurrentQuestion();
                     } else {
-                        console.log('[POLLING] ⏸️ Status is REGISTRATION - skipping loadCurrentQuestion()');
+                        console.log(`[POLLING] ⏸️ Status is "${statusBadge}" - skipping loadCurrentQuestion()`);
                     }
                 }, 3000);
             } catch (error) {
@@ -649,13 +783,11 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    questionsGenerated = true;
                     alert(`Quiz generated! Genres: ${data.selected_genres.join(', ')}`);
                     
-                    // Habilitar botón de Start ahora que hay preguntas
-                    document.getElementById('btnStart').disabled = false;
-                    document.getElementById('btnStart').style.opacity = '1';
-                    
-                    updateStats();
+                    // Refresh stats to update button states
+                    await updateStats();
                 } else {
                     alert('Error: ' + data.error);
                 }
@@ -842,11 +974,8 @@
                     statusBadge.textContent = displayStatus;
                     console.log(`[UPDATE_STATS] Status badge updated to: "${displayStatus}"`);
 
-                    if (stats.status === 'in_progress' || stats.status === 'halftime') {
-                        document.getElementById('btnStart').disabled = true;
-                        document.getElementById('btnShowAnswer').disabled = false;
-                        document.getElementById('btnNext').disabled = false;
-                    }
+                    // Update all button states based on current status
+                    updateButtonStates(stats.status);
 
                     // Update Genre Votes Summary
                     updateGenreVotesUI(stats);
