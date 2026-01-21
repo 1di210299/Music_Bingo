@@ -633,8 +633,27 @@
                 console.log('📝 No team registered, showing registration form');
                 console.log('🔗 Fetching session details from:', `${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                 try {
-                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
-                    console.log('📡 Response status:', response.status, response.statusText);
+                    console.log('⏳ Starting fetch...');
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        console.error('⏰ Fetch timeout after 10 seconds!');
+                        controller.abort();
+                    }, 10000);
+                    
+                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`, {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    console.log('📡 Response received! Status:', response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        console.error('❌ Response not OK:', response.status, response.statusText);
+                        const errorText = await response.text();
+                        console.error('❌ Error response body:', errorText);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    console.log('🔄 Parsing JSON...');
                     const data = await response.json();
                     console.log('📊 Session data loaded:', data);
                     console.log('🎭 Genres received:', data.genres);
@@ -658,7 +677,13 @@
                         await checkExistingTeam(savedTeamName);
                     }
                 } catch (error) {
-                    console.error('Error loading session details:', error);
+                    console.error('❌ ERROR loading session details:', error);
+                    console.error('❌ Error name:', error.name);
+                    console.error('❌ Error message:', error.message);
+                    console.error('❌ Error stack:', error.stack);
+                    
+                    // Show error to user
+                    alert(`Error loading quiz: ${error.message}\n\nPlease check the console for details.`);
                 }
             }
         }
