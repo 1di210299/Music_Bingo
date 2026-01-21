@@ -634,6 +634,20 @@
         async function loadCurrentQuestion() {
             try {
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/current-question`);
+                
+                // Si es 404, probablemente no hay preguntas generadas
+                if (response.status === 404) {
+                    document.getElementById('questionText').innerHTML = 
+                        '📝 Registration Phase<br><br>' +
+                        '<small style="font-size: 0.5em; opacity: 0.8; line-height: 1.6;">' +
+                        '1️⃣ Teams register and vote for genres<br>' +
+                        '2️⃣ Click "🔄 Generate" to create questions based on votes<br>' +
+                        '3️⃣ Click "▶️ Start Quiz" to begin' +
+                        '</small>';
+                    document.getElementById('currentGenre').textContent = 'Waiting for Teams';
+                    return;
+                }
+                
                 const data = await response.json();
 
                 if (data.success) {

@@ -78,6 +78,10 @@ def create_quiz_session(request):
             status='registration',
         )
         
+        # Asegurarse de que los géneros estén inicializados
+        if QuizGenre.objects.count() == 0:
+            initialize_genres_in_db()
+        
         return Response({
             'success': True,
             'session_id': session.id,

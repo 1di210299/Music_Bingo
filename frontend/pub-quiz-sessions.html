@@ -490,6 +490,13 @@
         async function createSession(event) {
             event.preventDefault();
             
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Mostrar loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Creating Session...';
+            
             const formData = {
                 venue_name: document.getElementById('venueName').value,
                 host_name: document.getElementById('hostName').value || 'Perfect DJ',
@@ -508,14 +515,23 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    hideCreateModal();
-                    // Redirect to host dashboard
-                    window.location.href = `/pub-quiz-host.html?session=${data.session_id}`;
+                    submitBtn.innerHTML = '✅ Session Created!';
+                    
+                    // Pequeño delay para mostrar el mensaje
+                    setTimeout(() => {
+                        hideCreateModal();
+                        // Redirect to host dashboard
+                        window.location.href = `/pub-quiz-host.html?session=${data.session_id}`;
+                    }, 800);
                 } else {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
                     alert('Error creating session: ' + data.error);
                 }
             } catch (error) {
                 console.error('Error creating session:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
                 alert('Failed to create session');
             }
         }
