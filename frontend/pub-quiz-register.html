@@ -427,9 +427,15 @@
             <div style="margin: 30px 0; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
                 <p>Wait for the host to start the quiz!</p>
             </div>
+            <button onclick="editRegistration()" style="background: rgba(255,193,7,0.2); border: 1px solid #ffc107; color: #ffc107; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 10px;">
+                ✏️ Edit Registration
+            </button>
         </div>
 
         <div id="gameContainer">
+            <button onclick="editRegistration()" style="position: fixed; top: 20px; right: 20px; background: rgba(255,193,7,0.2); border: 1px solid #ffc107; color: #ffc107; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; z-index: 1000; font-size: 0.9em;">
+                ✏️ Edit
+            </button>
             <div class="header">
                 <h2 id="roundTitle">Round 1</h2>
                 <div id="questionInfo" style="opacity: 0.7;">Question 1 / 40</div>
@@ -609,6 +615,25 @@
             document.getElementById('successMessage').style.display = 'none';
             document.getElementById('gameContainer').style.display = 'block';
             startPolling();
+        }
+
+        function editRegistration() {
+            // Detener polling si está activo
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            
+            // Volver a mostrar el formulario
+            document.getElementById('gameContainer').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('formContainer').style.display = 'block';
+            
+            // Cargar datos actuales del equipo
+            const savedTeamName = localStorage.getItem(`pub_quiz_team_name_${SESSION_ID}`);
+            if (savedTeamName) {
+                checkExistingTeam(savedTeamName);
+            }
         }
 
         function startPolling() {
