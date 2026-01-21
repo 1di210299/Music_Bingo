@@ -29,7 +29,7 @@ DATA_DIR = BASE_DIR / 'data'  # /app/data
 
 def index_view(request):
     from django.http import FileResponse
-    return FileResponse(open(FRONTEND_DIR / 'game.html', 'rb'))
+    return FileResponse(open(FRONTEND_DIR / 'index.html', 'rb'))
 
 def jingle_view(request):
     from django.http import FileResponse
