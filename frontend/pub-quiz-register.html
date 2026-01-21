@@ -494,7 +494,7 @@
 
         // Global variables
         const SESSION_ID = getSessionId();
-        const BASE_URL = '/backend' || 'http://localhost:8000';
+        const BASE_URL = window.BACKEND_URL || '';
         let allGenres = [];
         let selectedGenres = [];
         const MAX_GENRES = 5;
