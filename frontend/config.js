@@ -5,7 +5,7 @@
 
 // Detect backend URL
 const BACKEND_URL = (() => {
-    // In App Platform, BACKEND_URL will be injected
+    // Check if already set by server-side injection
     if (window.BACKEND_URL) return window.BACKEND_URL;
     
     // Local development
@@ -13,9 +13,13 @@ const BACKEND_URL = (() => {
         return 'http://localhost:8001';
     }
     
-    // Same origin (droplet setup) - this shouldn't happen in App Platform
-    return window.location.origin;
+    // Production with App Platform ingress - use empty string for relative paths
+    // Digital Ocean App Platform routes /api/* to backend automatically
+    return '';
 })();
+
+// Set window.BACKEND_URL for use across the app
+window.BACKEND_URL = BACKEND_URL;
 
 // Load configuration from .env file
 // In production, these would be set by your build system or server
