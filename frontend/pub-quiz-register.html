@@ -606,9 +606,13 @@
         let selectedOption = null; // For multiple choice questions
 
         async function init() {
+            console.log('🚀 Initializing... teamId:', teamId, 'SESSION_ID:', SESSION_ID);
+            
             if (teamId) {
+                console.log('✅ Team already registered, showing game');
                 showGame();
             } else {
+                console.log('📝 No team registered, showing registration form');
                 try {
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                     const data = await response.json();
