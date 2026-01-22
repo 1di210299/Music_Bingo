@@ -17,7 +17,7 @@
             const start = performance.now();
             try {
                 await fetch('/api/health', { 
-                    method: 'HEAD',
+                    method: 'GET',
                     cache: 'no-store',
                     credentials: 'same-origin'
                 });
