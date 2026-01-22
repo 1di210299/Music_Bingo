@@ -680,7 +680,11 @@
                     }, 30000);
 
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`, {
-                        signal: controller.signal
+                        signal: controller.signal,
+                        cache: 'no-cache',
+                        headers: {
+                            'Connection': 'keep-alive'
+                        }
                     });
                     clearTimeout(timeoutId);
                     console.log('📡 Response received! Status:', response.status, response.statusText);
