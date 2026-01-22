@@ -715,11 +715,14 @@ def host_stream(request, session_id):
                 question_changed = (session.current_round != last_round or 
                                   session.current_question != last_question)
                 
-                # Send updates every 3 seconds or when changes detected
+                # Only send updates when something actually changed OR every 10 seconds for heartbeat
                 current_time = timezone.now()
                 time_diff = (current_time - last_update_time).total_seconds()
                 
-                if status_changed or question_changed or time_diff >= 3:
+                # Send update if: status changed, question changed, or 10 seconds passed (heartbeat)
+                should_send_update = status_changed or question_changed or time_diff >= 10
+                
+                if should_send_update:
                     # Get stats
                     teams = session.teams.all()
                     total_teams = teams.count()
