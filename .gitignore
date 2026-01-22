@@ -73,3 +73,6 @@ htmlcov/
 api_keys.txt
 secrets.json
 credentials.json
+
+# Project CLI
+do.py
