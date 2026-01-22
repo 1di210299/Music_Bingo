@@ -5,31 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register Your Team - Perfect DJ Quiz</title>
-    
-    <!-- Resource Hints: Establish HTTP/2 connection early -->
-    <link rel="preconnect" href="https://music-bingo-x7qwu.ondigitalocean.app" crossorigin>
-    <link rel="dns-prefetch" href="https://music-bingo-x7qwu.ondigitalocean.app">
-    
-    <!-- Warmup connection BEFORE other scripts -->
-    <script>
-        // 🔥 GLOBAL WARMUP PROMISE - Establishes HTTP/2 connection early
-        window.connectionWarmup = (async function() {
-            const start = performance.now();
-            try {
-                await fetch('/api/health', { 
-                    method: 'GET',
-                    cache: 'no-store',
-                    credentials: 'same-origin'
-                });
-                const duration = performance.now() - start;
-                console.log(`✅ HTTP/2 warmed up in ${duration.toFixed(0)}ms`);
-                return true;
-            } catch (err) {
-                console.warn('⚠️ Warmup failed (non-critical):', err.message);
-                return false;
-            }
-        })();
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
@@ -450,26 +425,6 @@
 </head>
 
 <body>
-    <script>
-        // Debug: Check if BACKEND_URL was injected by server.js
-        console.log('🔧 window.BACKEND_URL at page load:', window.BACKEND_URL);
-        console.log('🔧 CONFIG available:', typeof CONFIG !== 'undefined');
-        if (typeof CONFIG !== 'undefined') {
-            console.log('🔧 CONFIG.BACKEND_URL:', CONFIG.BACKEND_URL);
-        }
-        
-        // 🔥 WARM UP HTTP/2 CONNECTION - Make a quick health check to establish connection early
-        console.log('🔥 Warming up HTTP/2 connection...');
-        fetch('/api/health', { 
-            method: 'GET',
-            cache: 'no-store',
-            priority: 'high'
-        }).then(() => {
-            console.log('✅ HTTP/2 connection warmed up');
-        }).catch(err => {
-            console.log('⚠️ Health check failed (non-critical):', err.message);
-        });
-    </script>
     <script src="/config.js"></script>
     <script>
         // Debug: Check CONFIG after loading config.js
@@ -704,56 +659,29 @@
             console.time('init-total');
             console.log('🚀 Initializing... teamId:', teamId, 'SESSION_ID:', SESSION_ID);
             
-            // ⏳ CRITICAL: Wait for warmup to complete
-            console.log('⏳ Waiting for connection warmup...');
-            const warmedUp = await window.connectionWarmup;
-            console.log('🚀 Warmup complete, proceeding with init...');
-            
             if (teamId) {
                 console.log('✅ Team already registered, showing game');
                 showGame();
                 console.timeEnd('init-total');
             } else {
                 console.log('📝 No team registered, showing registration form');
-                console.log('🔗 Fetching session details from:', `${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                 try {
-                    console.time('fetch-details');
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => {
-                        console.error('⏰ Fetch timeout after 30 seconds!');
-                        controller.abort();
-                    }, 30000);
-
-                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`, {
-                        signal: controller.signal,
-                        cache: 'no-cache',
-                        credentials: 'same-origin'
-                    });
-                    clearTimeout(timeoutId);
-                    console.timeEnd('fetch-details');
-                    console.log('📡 Response received! Status:', response.status, response.statusText);
-
-                    if (!response.ok) {
-                        console.error('❌ Response not OK:', response.status, response.statusText);
-                        const errorText = await response.text();
-                        console.error('❌ Error response body:', errorText);
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-
-                    console.log('🔄 Parsing JSON...');
-                    const data = await response.json();
-                    console.log('📊 Session data loaded:', data);
-                    console.log('🎭 Genres received:', data.genres);
-                    console.log('🎭 Number of genres:', data.genres?.length || 0);
-                    console.log('🎭 First genre example:', data.genres?.[0]);
-                    document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
-                    allGenres = data.genres || [];
-                    console.log('🎭 allGenres variable set:', allGenres.length);
-                    if (!allGenres || allGenres.length === 0) {
-                        console.error('❌ No genres loaded!');
-                    } else {
-                        console.log(`✅ Loaded ${allGenres.length} genres`);
-                        renderGenres(allGenres);
+                    console.time('load-genres-static');
+                    
+                    // 🚀 LOAD GENRES FROM STATIC FILE (INSTANT!)
+                    const genresResponse = await fetch('/data/genres.json');
+                    allGenres = await genresResponse.json();
+                    console.timeEnd('load-genres-static');
+                    console.log(`✅ Loaded ${allGenres.length} genres from static file`);
+                    renderGenres(allGenres);
+                    
+                    // Load session info (venue name) separately - this can be slower
+                    console.time('fetch-session-info');
+                    const sessionResponse = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
+                    if (sessionResponse.ok) {
+                        const data = await sessionResponse.json();
+                        document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
+                        console.timeEnd('fetch-session-info');
                     }
 
                     // Detectar si hay un equipo previo guardado (por nombre, no por teamId)
@@ -763,12 +691,7 @@
                     }
                     console.timeEnd('init-total');
                 } catch (error) {
-                    console.error('❌ ERROR loading session details:', error);
-                    console.error('❌ Error name:', error.name);
-                    console.error('❌ Error message:', error.message);
-                    console.error('❌ Error stack:', error.stack);
-
-                    // Show error to user
+                    console.error('❌ ERROR loading registration form:', error);
                     alert(`Error loading quiz: ${error.message}\n\nPlease check the console for details.`);
                     console.timeEnd('init-total');
                 }
@@ -926,9 +849,8 @@
             // Si no hay géneros cargados, cargarlos primero
             if (allGenres.length === 0) {
                 try {
-                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
-                    const data = await response.json();
-                    allGenres = data.genres;
+                    const response = await fetch('/data/genres.json');
+                    allGenres = await response.json();
                     renderGenres(allGenres);
                 } catch (error) {
                     console.error('Error loading genres:', error);
