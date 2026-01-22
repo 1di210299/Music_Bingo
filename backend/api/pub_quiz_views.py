@@ -167,10 +167,18 @@ def check_existing_team(request, session_id):
 @api_view(['POST'])
 def register_team(request, session_id):
     """Registra un nuevo equipo en la sesión o actualiza uno existente"""
+    logger.info(f"🚀 [REGISTER_TEAM] Starting registration for session {session_id}")
+    logger.info(f"📦 [REGISTER_TEAM] Request data: {request.data}")
+    logger.info(f"🔑 [REGISTER_TEAM] Content-Type: {request.content_type}")
+    
     try:
+        logger.info(f"🔍 [REGISTER_TEAM] Looking up session {session_id}")
         session = get_object_or_404(PubQuizSession, id=session_id)
+        logger.info(f"✅ [REGISTER_TEAM] Session found: {session.venue_name}, status: {session.status}")
+        
         data = request.data
         team_name = data.get('team_name')
+        logger.info(f"👥 [REGISTER_TEAM] Team name: {team_name}")
         
         # Buscar si ya existe un equipo con este nombre en esta sesión
         existing_team = QuizTeam.objects.filter(session=session, team_name=team_name).first()
@@ -216,6 +224,8 @@ def register_team(request, session_id):
         
         # Registrar votos de géneros (top 3-5)
         genre_votes = data.get('genre_votes', [])
+        logger.info(f"🎭 [REGISTER_TEAM] Genre votes: {genre_votes}")
+        
         for i, genre_id in enumerate(genre_votes[:5], 1):
             try:
                 genre = QuizGenre.objects.get(id=genre_id)
@@ -224,9 +234,12 @@ def register_team(request, session_id):
                     genre=genre,
                     priority=i
                 )
+                logger.info(f"✅ [REGISTER_TEAM] Voted for genre {genre.name} (priority {i})")
             except QuizGenre.DoesNotExist:
+                logger.warning(f"⚠️ [REGISTER_TEAM] Genre {genre_id} not found")
                 pass
         
+        logger.info(f"🎉 [REGISTER_TEAM] Registration successful! Team ID: {team.id}")
         return Response({
             'success': True,
             'team_id': team.id,
@@ -236,6 +249,7 @@ def register_team(request, session_id):
         }, status=status.HTTP_201_CREATED)
     
     except Exception as e:
+        logger.error(f"❌ [REGISTER_TEAM] Error: {str(e)}", exc_info=True)
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -1105,17 +1105,28 @@
 
             try {
                 console.log('🚀 Registering team:', formData);
+                console.log('📡 Sending POST to:', `${BASE_URL}/api/pub-quiz/${SESSION_ID}/register-team`);
+                console.log('📦 Request body:', JSON.stringify(formData));
+                
+                const fetchStart = performance.now();
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/register-team`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
+                const fetchDuration = performance.now() - fetchStart;
+                console.log(`⏱️ Fetch completed in ${fetchDuration.toFixed(0)}ms`);
+                console.log('📨 Response status:', response.status, response.statusText);
+                console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
                 
                 if (!response.ok) {
+                    console.error('❌ Response not OK!');
                     const errorText = await response.text();
+                    console.error('❌ Error body:', errorText);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
+                console.log('🔄 Parsing JSON response...');
                 const data = await response.json();
                 console.log('✅ Registration response:', data);
                 
