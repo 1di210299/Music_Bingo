@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register Your Team - Perfect DJ Quiz</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -260,8 +262,6 @@
                 transform: scale(1);
             }
 
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-
             body {
                 font-family: 'Outfit', sans-serif;
                 background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
@@ -275,7 +275,7 @@
                 align-items: center;
             }
         }
-        }
+
 
         .success-icon {
             font-size: 5em;
@@ -551,39 +551,39 @@
                     <h3 id="currentQuestionText">Loading question...</h3>
                     <div id="questionTypeLabel" style="font-size: 0.8em; opacity: 0.7; margin-top: 10px;"></div>
                 </div>
-                <<<<<<< HEAD=======>>>>>>> dev
-                    <!-- Multiple Choice Options -->
-                    <div id="multipleChoiceContainer" style="display: none; margin: 20px 0;">
-                        <div class="options-grid">
-                            <button class="option-btn" data-option="A" onclick="selectOption('A')">
-                                <span class="option-letter">A</span>
-                                <span class="option-text" id="optionA"></span>
-                            </button>
-                            <button class="option-btn" data-option="B" onclick="selectOption('B')">
-                                <span class="option-letter">B</span>
-                                <span class="option-text" id="optionB"></span>
-                            </button>
-                            <button class="option-btn" data-option="C" onclick="selectOption('C')">
-                                <span class="option-letter">C</span>
-                                <span class="option-text" id="optionC"></span>
-                            </button>
-                            <button class="option-btn" data-option="D" onclick="selectOption('D')">
-                                <span class="option-letter">D</span>
-                                <span class="option-text" id="optionD"></span>
-                            </button>
-                        </div>
-                        <button class="btn-register" onclick="submitMultipleChoice()" id="submitMCBtn" disabled>
-                            Submit Answer
+
+                <!-- Multiple Choice Options -->
+                <div id="multipleChoiceContainer" style="display: none; margin: 20px 0;">
+                    <div class="options-grid">
+                        <button class="option-btn" data-option="A" onclick="selectOption('A')">
+                            <span class="option-letter">A</span>
+                            <span class="option-text" id="optionA"></span>
+                        </button>
+                        <button class="option-btn" data-option="B" onclick="selectOption('B')">
+                            <span class="option-letter">B</span>
+                            <span class="option-text" id="optionB"></span>
+                        </button>
+                        <button class="option-btn" data-option="C" onclick="selectOption('C')">
+                            <span class="option-letter">C</span>
+                            <span class="option-text" id="optionC"></span>
+                        </button>
+                        <button class="option-btn" data-option="D" onclick="selectOption('D')">
+                            <span class="option-letter">D</span>
+                            <span class="option-text" id="optionD"></span>
                         </button>
                     </div>
+                    <button class="btn-register" onclick="submitMultipleChoice()" id="submitMCBtn" disabled>
+                        Submit Answer
+                    </button>
+                </div>
 
-                    <!-- Written Answer -->
-                    <div id="answerFormContainer">
-                        <input type="text" id="playerAnswer" class="answer-input" placeholder="Your answer here...">
-                        <button class="btn-register" onclick="sendAnswer()">Submit Answer</button>
-                    </div>
+                <!-- Written Answer -->
+                <div id="answerFormContainer">
+                    <input type="text" id="playerAnswer" class="answer-input" placeholder="Your answer here...">
+                    <button class="btn-register" onclick="sendAnswer()">Submit Answer</button>
+                </div>
 
-                    <div id="answerStatus" class="buzzed-at" style="display: none;">Answer Submitted! ✅</div>
+                <div id="answerStatus" class="buzzed-at" style="display: none;">Answer Submitted! ✅</div>
             </div>
 
             <div id="revealScreen" style="display: none;">
@@ -638,14 +638,24 @@
 
         // Global variables
         const SESSION_ID = getSessionId();
-        // Use same fallback as game.js - ingress rules will route to backend
+        // Use same fallback as config.js - ingress rules will route to backend
         const BASE_URL = (() => {
             const frontendUrl = `${window.location.protocol}//${window.location.host}`;
-            // If BACKEND_URL is equal to the URL of the frontend, use relative paths
-            if (window.BACKEND_URL === frontendUrl) {
-                return '';
+
+            // Check if already set by server-side injection
+            if (window.BACKEND_URL) {
+                if (window.BACKEND_URL === frontendUrl || window.BACKEND_URL === window.location.origin) {
+                    return ''; // Use relative paths for ingress
+                }
+                return window.BACKEND_URL;
             }
-            return window.BACKEND_URL || window.location.origin;
+
+            // Local development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:8001';
+            }
+
+            return '';
         })();
 
         console.log('🌐 Global variables initialized:');
@@ -701,30 +711,16 @@
                     console.log('🎭 Genres received:', data.genres);
                     console.log('🎭 Number of genres:', data.genres?.length || 0);
                     console.log('🎭 First genre example:', data.genres?.[0]);
-<<<<<<< HEAD
-
                     document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
                     allGenres = data.genres || [];
                     console.log('🎭 allGenres variable set:', allGenres.length);
-
-=======
-
-                    document.getElementById('venueName').innerHTML = `📍 <span class="venue-badge">${data.session.venue_name}</span>`;
-                    allGenres = data.genres || [];
-                    console.log('🎭 allGenres variable set:', allGenres.length);
-
->>>>>>> dev
                     if (!allGenres || allGenres.length === 0) {
                         console.error('❌ No genres loaded!');
                     } else {
                         console.log(`✅ Loaded ${allGenres.length} genres`);
                         renderGenres(allGenres);
                     }
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                     // Detectar si hay un equipo previo guardado (por nombre, no por teamId)
                     const savedTeamName = localStorage.getItem(`pub_quiz_team_name_${SESSION_ID}`);
                     if (savedTeamName) {
@@ -735,11 +731,7 @@
                     console.error('❌ Error name:', error.name);
                     console.error('❌ Error message:', error.message);
                     console.error('❌ Error stack:', error.stack);
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                     // Show error to user
                     alert(`Error loading quiz: ${error.message}\n\nPlease check the console for details.`);
                 }
@@ -758,19 +750,9 @@
                         document.getElementById('numPlayers').value = data.team.num_players || 4;
                         document.getElementById('socialHandle').value = data.team.social_handle || '';
                         document.getElementById('followedSocial').checked = data.team.followed_social || false;
-<<<<<<< HEAD
-
                         // Pre-seleccionar géneros votados
                         selectedGenres = data.team.genre_votes || [];
                         renderGenres(allGenres);
-
-=======
-
-                        // Pre-seleccionar géneros votados
-                        selectedGenres = data.team.genre_votes || [];
-                        renderGenres(allGenres);
-
->>>>>>> dev
                         // Mostrar mensaje de edición
                         const registerCard = document.querySelector('.register-card');
                         const editBanner = document.createElement('div');
@@ -790,16 +772,11 @@
             console.log('🎨 renderGenres() called with', genresList.length, 'genres');
             const genreGrid = document.getElementById('genreGrid');
             console.log('   genreGrid element:', genreGrid ? 'found' : 'NOT FOUND');
-<<<<<<< HEAD
 
-=======
->>>>>>> dev
             if (!genreGrid) {
                 console.error('❌ genreGrid element not found!');
                 return;
             }
-<<<<<<< HEAD
-
             console.log('   Building HTML for genres...');
             genreGrid.innerHTML = genresList.map(genre => `
                 <div class="genre-item ${selectedGenres.includes(genre.id) ? 'selected' : ''}" onclick="toggleGenre(this, ${genre.id})">
@@ -807,18 +784,6 @@
                     ${genre.icon || '❓'} ${genre.name}
                 </div>
             `).join('');
-
-=======
-
-            console.log('   Building HTML for genres...');
-            genreGrid.innerHTML = genresList.map(genre => `
-                    <label for="genre${genre.id}" style="margin: 0; cursor: pointer;">
-                        ${genre.icon || '❓'} ${genre.name}
-                    </label>
-                </div>
-            `).join('');
-
->>>>>>> dev
             console.log('✅ Genres rendered to DOM');
         }
 
@@ -859,33 +824,15 @@
             document.getElementById('successMessage').style.display = 'none';
             console.log('   Showing gameContainer');
             document.getElementById('gameContainer').style.display = 'block';
-<<<<<<< HEAD
-
             // Check session status first
             checkSessionStatus();
         }
-
-=======
-
-            // Check session status first
-            checkSessionStatus();
-        }
-
->>>>>>> dev
         async function checkSessionStatus() {
             try {
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                 const data = await response.json();
                 const status = data.session.status;
-<<<<<<< HEAD
-
                 console.log(`Session status: ${status}`);
-
-=======
-
-                console.log(`Session status: ${status}`);
-
->>>>>>> dev
                 if (status === 'in_progress' || status === 'halftime' || status === 'revealing_answer') {
                     // Quiz is active - connect to SSE
                     connectSSE();
@@ -901,11 +848,7 @@
                 console.error('Error checking session status:', error);
             }
         }
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
         function startStatusPolling() {
             // Poll session status every 5 seconds when waiting for quiz to start
             if (statusPollInterval) clearInterval(statusPollInterval);
@@ -914,11 +857,7 @@
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/details`);
                     const data = await response.json();
                     const status = data.session.status;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                     if (status === 'in_progress' || status === 'halftime') {
                         // Quiz started! Stop status polling and connect to SSE
                         clearInterval(statusPollInterval);
@@ -941,20 +880,12 @@
                 clearInterval(statusPollInterval);
                 statusPollInterval = null;
             }
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
             // Volver a mostrar el formulario
             document.getElementById('gameContainer').style.display = 'none';
             document.getElementById('successMessage').style.display = 'none';
             document.getElementById('formContainer').style.display = 'block';
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
             // Si no hay géneros cargados, cargarlos primero
             if (allGenres.length === 0) {
                 try {
@@ -966,11 +897,7 @@
                     console.error('Error loading genres:', error);
                 }
             }
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
             // Cargar datos actuales del equipo
             const savedTeamName = localStorage.getItem(`pub_quiz_team_name_${SESSION_ID}`);
             if (savedTeamName) {
@@ -983,66 +910,34 @@
             if (eventSource) {
                 eventSource.close();
             }
-<<<<<<< HEAD
-
             console.log('🔌 Connecting to SSE stream...');
             eventSource = new EventSource(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/stream`);
-
-=======
-
-            console.log('🔌 Connecting to SSE stream...');
-            eventSource = new EventSource(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/stream`);
-
->>>>>>> dev
             eventSource.onopen = () => {
                 console.log('✅ SSE Connected');
                 sseRetryCount = 0; // Reset retry counter on successful connection
             };
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
             eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     console.log('📨 SSE Message:', data.type);
-<<<<<<< HEAD
-
                     switch (data.type) {
                         case 'connected':
                             console.log(`Connected to session ${data.session_id}`);
                             break;
-
-=======
-
-                    switch (data.type) {
-                        case 'connected':
-                            console.log(`Connected to session ${data.session_id}`);
-                            break;
-
->>>>>>> dev
                         case 'waiting':
                             // Waiting for questions to be generated
                             console.log(`⏳ ${data.message}`);
                             showScreen('waitingScreen');
                             break;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         case 'question_update':
                             // New question or question update
                             const question = data.question;
                             currentQuestionId = question.id;
                             updateUI(data.session_status, question);
                             break;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         case 'status_change':
                             // Status changed (registration, ready, etc.)
                             console.log(`Status changed to: ${data.status}`);
@@ -1050,11 +945,7 @@
                                 showScreen('waitingScreen');
                             }
                             break;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         case 'ended':
                             // Quiz completed
                             showScreen('waitingScreen');
@@ -1062,11 +953,7 @@
                             eventSource.close();
                             eventSource = null;
                             break;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         case 'error':
                             console.error('SSE Error:', data.message);
                             break;
@@ -1075,20 +962,12 @@
                     console.error('Error parsing SSE message:', error);
                 }
             };
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
             eventSource.onerror = (error) => {
                 console.error('❌ SSE Connection error:', error);
                 eventSource.close();
                 eventSource = null;
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                 // Retry connection after 5 seconds
                 console.log('Retrying SSE connection in 5 seconds...');
                 setTimeout(() => {
@@ -1122,8 +1001,6 @@
                     if (document.getElementById('currentQuestionText')) {
                         document.getElementById('currentQuestionText').textContent = question.text;
                     }
-<<<<<<< HEAD
-
                     // Show question type label
                     const typeLabel = document.getElementById('questionTypeLabel');
                     if (typeLabel) {
@@ -1131,28 +1008,12 @@
                             '📝 Multiple Choice - Select the correct answer' :
                             '✍️ Written Answer - Type your answer';
                     }
-
-=======
-
-                    // Show question type label
-                    const typeLabel = document.getElementById('questionTypeLabel');
-                    if (typeLabel) {
-                        typeLabel.textContent = question.type === 'multiple_choice' ?
-                            '📝 Multiple Choice - Select the correct answer' :
-                            '✍️ Written Answer - Type your answer';
-                    }
-
->>>>>>> dev
                     // Handle multiple choice vs written answer
                     if (question.type === 'multiple_choice' && question.options) {
                         // Show multiple choice options
                         document.getElementById('multipleChoiceContainer').style.display = 'block';
                         document.getElementById('answerFormContainer').style.display = 'none';
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         // Populate options
                         ['A', 'B', 'C', 'D'].forEach(letter => {
                             const optionText = document.getElementById('option' + letter);
@@ -1160,11 +1021,7 @@
                                 optionText.textContent = question.options[letter];
                             }
                         });
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         // Reset selection if new question
                         if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
                             document.querySelectorAll('.option-btn').forEach(btn => {
@@ -1177,11 +1034,7 @@
                         // Show written answer input
                         document.getElementById('multipleChoiceContainer').style.display = 'none';
                         document.getElementById('answerFormContainer').style.display = 'block';
-<<<<<<< HEAD
 
-=======
-
->>>>>>> dev
                         if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
                             document.getElementById('playerAnswer').value = '';
                             document.getElementById('answerStatus').style.display = 'none';
@@ -1247,7 +1100,6 @@
             // Deselect all options
             document.querySelectorAll('.option-btn').forEach(btn => {
                 btn.classList.remove('selected');
-<<<<<<< HEAD
             });
 
             // Select clicked option
@@ -1257,21 +1109,10 @@
                 selectedOption = letter;
                 document.getElementById('submitMCBtn').disabled = false;
             }
-=======
-                // Select clicked option
-                const selectedBtn = document.querySelector(`.option-btn[data-option="${letter}"]`);
-                if (selectedBtn) {
-                    selectedBtn.classList.add('selected');
-                    selectedOption = letter;
-                    document.getElementById('submitMCBtn').disabled = false;
-                }
-            })
->>>>>>> dev
         }
 
         async function submitMultipleChoice() {
             if (!selectedOption) return;
-<<<<<<< HEAD
 
             try {
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/question/${currentQuestionId}/submit`, {
@@ -1303,63 +1144,26 @@
                 followed_social: document.getElementById('followedSocial').checked,
                 genre_votes: selectedGenres
             };
-=======
 
->>>>>>> dev
             try {
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/question/${currentQuestionId}/submit`, {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/register-team`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        team_id: teamId,
-                        answer: selectedOption,
-                        is_multiple_choice: true
-                    })
+                    body: JSON.stringify(formData)
                 });
                 const data = await response.json();
                 if (data.success) {
-<<<<<<< HEAD
                     teamId = data.team_id;
                     localStorage.setItem(`pub_quiz_team_${SESSION_ID}`, teamId);
                     localStorage.setItem(`pub_quiz_team_name_${SESSION_ID}`, formData.team_name);
                     showGame();
                 } else {
                     alert('Error: ' + data.error);
-=======
-                    document.getElementById('multipleChoiceContainer').style.display = 'none';
-                    document.getElementById('answerStatus').style.display = 'block';
->>>>>>> dev
                 }
-            } catch (e) {
-                console.error('Error submitting multiple choice answer:', e);
+            } catch (error) {
+                console.error('Error registering team:', error);
             }
-
-            document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-                const formData = {
-                    team_name: document.getElementById('teamName').value,
-                    table_number: parseInt(document.getElementById('tableNumber').value),
-                    num_players: parseInt(document.getElementById('numPlayers').value),
-                    followed_social: document.getElementById('followedSocial').checked,
-                    genre_votes: selectedGenres
-                };
-                try {
-                    const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/register-team`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData)
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        teamId = data.team_id;
-                        localStorage.setItem(`pub_quiz_team_${SESSION_ID}`, teamId);
-                        showGame();
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                } catch (error) { console.error('Error registering team:', error); }
-            });
-
-        }
+        });
     </script>
 </body>
 
