@@ -58,6 +58,30 @@ def jingle_manager_view(request):
     
     return FileResponse(open(file_path, 'rb'))
 
+def pub_quiz_register_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'pub-quiz-register.html', 'rb'))
+
+def pub_quiz_host_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'pub-quiz-host.html', 'rb'))
+
+def pub_quiz_sessions_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'pub-quiz-sessions.html', 'rb'))
+
+def game_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'game.html', 'rb'))
+
+def karaoke_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'karaoke.html', 'rb'))
+
+def karaoke_host_view(request):
+    from django.http import FileResponse
+    return FileResponse(open(FRONTEND_DIR / 'karaoke-host.html', 'rb'))
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
@@ -67,6 +91,16 @@ urlpatterns = [
     path("jingle-manager/", jingle_manager_view, name="jingle-manager"),
     path("jingle", jingle_view, name="jingle-no-slash"),
     path("jingle/", jingle_view, name="jingle"),
+    
+    # Pub Quiz pages
+    path("pub-quiz-register.html", pub_quiz_register_view, name="pub-quiz-register"),
+    path("pub-quiz-host.html", pub_quiz_host_view, name="pub-quiz-host"),
+    path("pub-quiz-sessions.html", pub_quiz_sessions_view, name="pub-quiz-sessions"),
+    
+    # Game pages
+    path("game.html", game_view, name="game"),
+    path("karaoke.html", karaoke_view, name="karaoke"),
+    path("karaoke-host.html", karaoke_host_view, name="karaoke-host"),
     
     # Static files
     re_path(r'^(?P<path>game\.js|styles\.css|config\.js|env-loader\.js|jingle\.js|jingle-manager\.js)$', lambda request, path: serve(request, path, document_root=str(FRONTEND_DIR))),
