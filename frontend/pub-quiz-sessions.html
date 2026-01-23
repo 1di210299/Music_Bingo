@@ -209,6 +209,17 @@
             flex: 1;
         }
 
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4757 0%, #e84118 100%);
+            flex: 0 0 auto;
+            min-width: 45px;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #e84118 0%, #c23616 100%);
+            transform: translateY(-2px);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -483,6 +494,9 @@
                             <button class="btn btn-secondary btn-small" onclick="openRegistration(${session.id})">
                                 📱 QR
                             </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteSession(${session.id}, '${session.venue_name}')" title="Delete Session">
+                                🗑️
+                            </button>
                         </div>
                     </div>
                 `;
@@ -567,6 +581,39 @@
 
         function openRegistration(sessionId) {
             window.location.href = `/pub-quiz-register.html?session=${sessionId}`;
+        }
+
+        async function deleteSession(sessionId, venueName) {
+            console.log(`🗑️ [DELETE] Attempting to delete session ${sessionId} (${venueName})`);
+            
+            if (!confirm(`Are you sure you want to delete the quiz session "${venueName}"?\n\nThis will permanently delete:\n• All registered teams\n• All questions and answers\n• All session data\n\nThis action cannot be undone!`)) {
+                console.log('❌ [DELETE] User cancelled deletion');
+                return;
+            }
+
+            try {
+                console.log(`📤 [DELETE] Sending DELETE request for session ${sessionId}...`);
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${sessionId}/delete`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+                console.log(`📥 [DELETE] Response:`, response.status, data);
+
+                if (data.success) {
+                    console.log(`✅ [DELETE] Session deleted successfully`);
+                    alert(`Session "${venueName}" deleted successfully!`);
+                    // Reload sessions list
+                    loadSessions();
+                } else {
+                    console.error(`❌ [DELETE] Failed:`, data.error);
+                    alert('Error deleting session: ' + data.error);
+                }
+            } catch (error) {
+                console.error('❌ [DELETE] Exception:', error);
+                alert('Failed to delete session: ' + error.message);
+            }
         }
     </script>
 </body>

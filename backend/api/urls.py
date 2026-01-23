@@ -63,6 +63,7 @@ urlpatterns = [
     path('pub-quiz/<int:session_id>/host-data', pub_quiz_views.quiz_host_data, name='pub-quiz-host-data'),
     path('pub-quiz/<int:session_id>/start', pub_quiz_views.start_quiz, name='pub-quiz-start'),
     path('pub-quiz/<int:session_id>/reset', pub_quiz_views.reset_quiz, name='pub-quiz-reset'),
+    path('pub-quiz/<int:session_id>/delete', pub_quiz_views.delete_session, name='pub-quiz-delete'),
     path('pub-quiz/<int:session_id>/next', pub_quiz_views.next_question, name='pub-quiz-next'),
     path('pub-quiz/<int:session_id>/stream', pub_quiz_views.quiz_stream, name='pub-quiz-stream'),  # SSE endpoint for players
     path('pub-quiz/<int:session_id>/host-stream', pub_quiz_views.host_stream, name='pub-quiz-host-stream'),  # SSE endpoint for host

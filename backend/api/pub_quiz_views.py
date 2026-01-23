@@ -558,6 +558,35 @@ def reset_quiz(request, session_id):
     session.current_question = 0
     session.save()
     
+    return Response({'success': True, 'message': 'Quiz reset successfully'})
+
+
+@api_view(['DELETE'])
+def delete_session(request, session_id):
+    """Elimina completamente una sesión y todos sus datos relacionados"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"🗑️ [DELETE_SESSION] Request to delete session {session_id}")
+    
+    session = get_object_or_404(PubQuizSession, id=session_id)
+    venue_name = session.venue_name
+    
+    # Django cascadeará automáticamente y borrará:
+    # - Teams (por ForeignKey con on_delete=CASCADE)
+    # - GenreVotes (relacionados a teams)
+    # - QuizQuestions (por ForeignKey)
+    # - QuizRounds (por ForeignKey)
+    # - TeamAnswers (relacionados a teams)
+    
+    session.delete()
+    
+    logger.info(f"✅ [DELETE_SESSION] Session '{venue_name}' (ID: {session_id}) deleted successfully")
+    
+    return Response({
+        'success': True, 
+        'message': f'Session "{venue_name}" deleted successfully'
+    })
+    
     return Response({
         'success': True,
         'message': 'Quiz reset successfully',
