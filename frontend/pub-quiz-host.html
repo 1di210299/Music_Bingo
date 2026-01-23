@@ -480,6 +480,40 @@
                 </button>
             </div>
 
+            <!-- Auto-Advance Timer Controls -->
+            <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: 600;">⏱️ Auto-Advance Timer</div>
+                    <button onclick="toggleAutoAdvance()" class="btn btn-secondary" id="btnToggleAuto" style="padding: 5px 15px; font-size: 0.8em;">
+                        <span id="autoAdvanceLabel">Enable</span>
+                    </button>
+                </div>
+                
+                <!-- Timer Display (shown when auto-advance is enabled) -->
+                <div id="timerDisplay" style="display: none;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <div style="flex: 1; text-align: center;">
+                            <div style="font-size: 2.5em; font-weight: 800; color: var(--accent);" id="countdown">15</div>
+                            <div style="font-size: 0.8em; opacity: 0.7;">seconds remaining</div>
+                        </div>
+                        <button onclick="pauseAutoAdvance()" class="btn btn-secondary" id="btnPauseTimer" style="padding: 8px 15px;">
+                            <span id="pauseLabel">⏸️ Pause</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Timer Settings -->
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="font-size: 0.9em;">Duration:</label>
+                        <input type="number" id="timerSeconds" value="15" min="5" max="120" 
+                               style="width: 60px; padding: 5px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white; text-align: center;">
+                        <span style="font-size: 0.9em; opacity: 0.7;">seconds</span>
+                        <button onclick="updateTimerDuration()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.8em;">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Progress Bar for Question Generation -->
             <div id="generationProgress" style="display: none; margin-top: 15px;">
                 <div style="font-size: 0.8em; margin-bottom: 5px; opacity: 0.8;">
@@ -633,6 +667,13 @@
         let isPlayingWelcomeMessage = false; // Flag to prevent question TTS during welcome
         let currentRound = 0; // Track current round number
         let roundGenres = {}; // Store round -> genre mapping
+        
+        // Auto-advance timer variables
+        let autoAdvanceEnabled = false;
+        let autoAdvancePaused = false;
+        let autoAdvanceSeconds = 15;
+        let questionStartedAt = null;
+        let countdownInterval = null;
 
         // SSE connection for host panel
         function connectHostSSE() {
@@ -729,6 +770,19 @@
             document.getElementById('statRound').textContent = stats.current_round;
             document.getElementById('statTotalRounds').textContent = stats.total_rounds;
             // statFollowers no viene en stats
+            
+            // Update auto-advance timer state
+            if (stats.auto_advance_enabled !== undefined) {
+                autoAdvanceEnabled = stats.auto_advance_enabled;
+                autoAdvanceSeconds = stats.auto_advance_seconds || 15;
+                autoAdvancePaused = stats.auto_advance_paused || false;
+                questionStartedAt = stats.question_started_at;
+                
+                updateTimerUI();
+                document.getElementById('timerSeconds').value = autoAdvanceSeconds;
+                document.getElementById('pauseLabel').textContent = autoAdvancePaused ? '▶️ Resume' : '⏸️ Pause';
+            }
+            
             const statusBadge = document.getElementById('statusBadge');
             statusBadge.textContent = stats.status.toUpperCase().replace('_', ' ');
             statusBadge.className = `status-badge ${stats.status}`;
@@ -1233,6 +1287,122 @@
                 }
             } catch (error) {
                 console.error('Error moving to next question:', error);
+            }
+        }
+
+        // Auto-advance timer functions
+        async function toggleAutoAdvance() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/toggle-auto-advance`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    autoAdvanceEnabled = data.auto_advance_enabled;
+                    updateTimerUI();
+                }
+            } catch (error) {
+                console.error('Error toggling auto-advance:', error);
+            }
+        }
+
+        async function pauseAutoAdvance() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/pause-auto-advance`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    autoAdvancePaused = data.auto_advance_paused;
+                    document.getElementById('pauseLabel').textContent = autoAdvancePaused ? '▶️ Resume' : '⏸️ Pause';
+                }
+            } catch (error) {
+                console.error('Error pausing auto-advance:', error);
+            }
+        }
+
+        async function updateTimerDuration() {
+            const seconds = parseInt(document.getElementById('timerSeconds').value);
+            if (seconds < 5 || seconds > 120) {
+                alert('Timer must be between 5 and 120 seconds');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/set-auto-advance-time`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seconds })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    autoAdvanceSeconds = data.auto_advance_seconds;
+                }
+            } catch (error) {
+                console.error('Error updating timer duration:', error);
+            }
+        }
+
+        function updateTimerUI() {
+            const timerDisplay = document.getElementById('timerDisplay');
+            const autoAdvanceLabel = document.getElementById('autoAdvanceLabel');
+            const btnToggleAuto = document.getElementById('btnToggleAuto');
+            
+            if (autoAdvanceEnabled) {
+                timerDisplay.style.display = 'block';
+                autoAdvanceLabel.textContent = 'Disable';
+                btnToggleAuto.classList.add('btn-primary');
+                btnToggleAuto.classList.remove('btn-secondary');
+                startCountdown();
+            } else {
+                timerDisplay.style.display = 'none';
+                autoAdvanceLabel.textContent = 'Enable';
+                btnToggleAuto.classList.remove('btn-primary');
+                btnToggleAuto.classList.add('btn-secondary');
+                stopCountdown();
+            }
+        }
+
+        function startCountdown() {
+            stopCountdown(); // Clear any existing interval
+            
+            countdownInterval = setInterval(() => {
+                if (!autoAdvanceEnabled || autoAdvancePaused || !questionStartedAt) {
+                    return;
+                }
+                
+                const now = new Date();
+                const started = new Date(questionStartedAt);
+                const elapsed = Math.floor((now - started) / 1000);
+                const remaining = Math.max(0, autoAdvanceSeconds - elapsed);
+                
+                // Update display
+                document.getElementById('countdown').textContent = remaining;
+                
+                // Change color when time is running out
+                const countdownEl = document.getElementById('countdown');
+                if (remaining <= 5) {
+                    countdownEl.style.color = '#ef4444'; // Red
+                } else if (remaining <= 10) {
+                    countdownEl.style.color = '#f59e0b'; // Orange
+                } else {
+                    countdownEl.style.color = 'var(--accent)';
+                }
+                
+                // Auto-advance when time is up
+                if (remaining === 0) {
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
             }
         }
 

@@ -586,6 +586,7 @@ def start_quiz(request, session_id):
     session.status = 'in_progress'
     session.current_round = 1
     session.current_question = 1
+    session.question_started_at = timezone.now()  # Mark when question started
     session.save()
     
     # Marcar primera ronda como iniciada
@@ -680,6 +681,7 @@ def next_question(request, session_id):
     
     if session.current_question < total_questions_in_round:
         session.current_question += 1
+        session.question_started_at = timezone.now()  # Mark when question started
     else:
         # Siguiente ronda
         current_round = session.rounds.filter(round_number=session.current_round).first()
@@ -691,6 +693,7 @@ def next_question(request, session_id):
         if session.current_round < session.total_rounds:
             session.current_round += 1
             session.current_question = 1
+            session.question_started_at = timezone.now()  # Mark when question started
             
             # Verificar si es halftime
             next_round = session.rounds.filter(round_number=session.current_round).first()
@@ -710,6 +713,61 @@ def next_question(request, session_id):
         'current_round': session.current_round,
         'current_question': session.current_question,
         'status': session.status
+    })
+
+
+@api_view(['POST'])
+def toggle_auto_advance(request, session_id):
+    """Toggle auto-advance on/off"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    session.auto_advance_enabled = not session.auto_advance_enabled
+    if session.auto_advance_enabled and session.status == 'in_progress':
+        # Starting auto-advance - mark current question start time
+        session.question_started_at = timezone.now()
+    session.save()
+    
+    return Response({
+        'success': True,
+        'auto_advance_enabled': session.auto_advance_enabled
+    })
+
+
+@api_view(['POST'])
+def pause_auto_advance(request, session_id):
+    """Pause/resume auto-advance timer"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    session.auto_advance_paused = not session.auto_advance_paused
+    session.save()
+    
+    return Response({
+        'success': True,
+        'auto_advance_paused': session.auto_advance_paused
+    })
+
+
+@api_view(['POST'])
+def set_auto_advance_time(request, session_id):
+    """Set auto-advance timer duration"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    seconds = request.data.get('seconds', 15)
+    if seconds < 5 or seconds > 120:
+        return Response({"error": "Seconds must be between 5 and 120"}, status=400)
+    
+    session.auto_advance_seconds = seconds
+    session.save()
+    
+    return Response({
+        'success': True,
+        'auto_advance_seconds': session.auto_advance_seconds
     })
 
 
@@ -950,7 +1008,11 @@ def host_stream(request, session_id):
                             'current_question': session.current_question,
                             'total_rounds': session.total_rounds,
                             'questions_per_round': session.questions_per_round,
-                            'questions_generated': questions_generated
+                            'questions_generated': questions_generated,
+                            'auto_advance_enabled': session.auto_advance_enabled,
+                            'auto_advance_seconds': session.auto_advance_seconds,
+                            'auto_advance_paused': session.auto_advance_paused,
+                            'question_started_at': session.question_started_at.isoformat() if session.question_started_at else None
                         },
                         'leaderboard': leaderboard,
                         'question': question_data,
