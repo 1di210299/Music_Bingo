@@ -157,7 +157,9 @@ def create_quiz_session(request):
 @api_view(['GET'])
 def get_session_details(request, session_id):
     """Página de registro para equipos (acceso vía QR)"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     genres = QuizGenre.objects.filter(is_active=True).order_by('order')
     
     return Response({
@@ -180,7 +182,9 @@ def get_session_details(request, session_id):
 def check_existing_team(request, session_id):
     """Verifica si un equipo ya existe en la sesión y devuelve sus datos"""
     try:
-        session = get_object_or_404(PubQuizSession, id=session_id)
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            return Response({"error": "Session not found"}, status=404)
         team_name = request.GET.get('team_name', '')
         
         if not team_name:
@@ -219,7 +223,9 @@ def register_team(request, session_id):
     
     try:
         logger.info(f"🔍 [REGISTER_TEAM] Looking up session {session_id}")
-        session = get_object_or_404(PubQuizSession, id=session_id)
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            return Response({"error": "Session not found"}, status=404)
         logger.info(f"✅ [REGISTER_TEAM] Session found: {session.venue_name}, status: {session.status}")
         
         data = request.data
@@ -302,7 +308,9 @@ def register_team(request, session_id):
 @api_view(['GET'])
 def generate_qr_code(request, session_id):
     """Genera código QR para registro del equipo"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     # Registration URL should point to the frontend
     registration_url = f"/pub-quiz/register/{session_id}"
     
@@ -338,7 +346,9 @@ def generate_quiz_questions(request, session_id):
     logger.info(f"🎯 [GENERATE_QUESTIONS] Starting generation for session {session_id}")
     
     try:
-        session = get_object_or_404(PubQuizSession, id=session_id)
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            return Response({"error": "Session not found"}, status=404)
         logger.info(f"✅ [GENERATE_QUESTIONS] Session found: {session.session_code}, rounds: {session.total_rounds}, questions/round: {session.questions_per_round}")
         
         # Initialize progress
@@ -507,7 +517,9 @@ def quiz_host_data(request, session_id):
     logger = logging.getLogger(__name__)
     logger.info(f"📊 [HOST_DATA] Request for session {session_id}")
     
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     teams = session.teams.all().order_by('-total_score')
     rounds = session.rounds.all()
     
@@ -550,7 +562,9 @@ def quiz_host_data(request, session_id):
 @api_view(['POST'])
 def start_quiz(request, session_id):
     """Inicia el quiz"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     session.status = 'in_progress'
     session.current_round = 1
     session.current_question = 1
@@ -581,7 +595,9 @@ def start_quiz(request, session_id):
 @api_view(['POST'])
 def reset_quiz(request, session_id):
     """Reinicia completamente el quiz a su estado inicial"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     
     # Borrar todas las respuestas
     TeamAnswer.objects.filter(team__session=session).delete()
@@ -613,7 +629,9 @@ def delete_session(request, session_id):
     logger = logging.getLogger(__name__)
     logger.info(f"🗑️ [DELETE_SESSION] Request to delete session {session_id}")
     
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     venue_name = session.venue_name
     
     # Django cascadeará automáticamente y borrará:
@@ -636,7 +654,9 @@ def delete_session(request, session_id):
 @api_view(['POST'])
 def next_question(request, session_id):
     """Avanza a la siguiente pregunta"""
-    session = get_object_or_404(PubQuizSession, id=session_id)
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
     
     total_questions_in_round = session.questions_per_round
     
@@ -682,7 +702,10 @@ def quiz_stream(request, session_id):
     """
     def event_generator():
         """Generator that yields SSE-formatted messages"""
-        session = get_object_or_404(PubQuizSession, id=session_id)
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            yield f"data: {{\"type\": \"error\", \"message\": \"Session not found\"}}\n\n"
+            return
         last_round = session.current_round
         last_question = session.current_question
         last_status = session.status
@@ -801,7 +824,10 @@ def host_stream(request, session_id):
     
     def event_generator():
         """Generator for host-specific updates"""
-        session = get_object_or_404(PubQuizSession, id=session_id)
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            yield f"data: {{\"type\": \"error\", \"message\": \"Session not found\"}}\n\n"
+            return
         last_update_time = timezone.now()
         last_status = session.status
         last_round = session.current_round
