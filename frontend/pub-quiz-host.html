@@ -524,21 +524,21 @@
                     <div></div>
                 </div>
 
-            <div id="difficultyBreakdown" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; display: none;">
-                <div class="stat-label" style="margin-bottom: 10px;">📊 Current Round Difficulty</div>
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <div style="flex: 1; background: #4ade80; height: 8px; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85em; opacity: 0.8;">Easy: <span id="easyCount">0</span></span>
+                <div id="difficultyBreakdown" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-top: 12px;">
+                    <div class="stat-label" style="margin-bottom: 10px;">📊 Round Difficulty Mix</div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                        <div style="width: 40px; background: #4ade80; height: 6px; border-radius: 3px;"></div>
+                        <span style="font-size: 0.8em; opacity: 0.8;">Easy: <span id="easyCount">0</span></span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                        <div style="width: 40px; background: #fbbf24; height: 6px; border-radius: 3px;"></div>
+                        <span style="font-size: 0.8em; opacity: 0.8;">Medium: <span id="mediumCount">0</span></span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <div style="width: 40px; background: #f87171; height: 6px; border-radius: 3px;"></div>
+                        <span style="font-size: 0.8em; opacity: 0.8;">Hard: <span id="hardCount">0</span></span>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                    <div style="flex: 1; background: #fbbf24; height: 8px; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85em; opacity: 0.8;">Medium: <span id="mediumCount">0</span></span>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <div style="flex: 1; background: #f87171; height: 8px; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85em; opacity: 0.8;">Hard: <span id="hardCount">0</span></span>
-                </div>
-            </div>
             </div>
 
             <!-- Controls Section -->
@@ -981,7 +981,6 @@
                 document.getElementById('easyCount').textContent = easy;
                 document.getElementById('mediumCount').textContent = medium;
                 document.getElementById('hardCount').textContent = hard;
-                document.getElementById('difficultyBreakdown').style.display = 'block';
                 
             } catch (error) {
                 console.error('Error updating difficulty breakdown:', error);
