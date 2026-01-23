@@ -127,10 +127,12 @@ class PubQuizGenerator:
         difficulty_instruction = ""
         if difficulty_mix:
             difficulty_instruction = """
-Mix difficulty levels:
-- 3-4 easy questions (warm-up, broad knowledge)
-- 4-5 medium questions (main challenge)
-- 2-3 hard questions (expert level)
+⚠️ CRITICAL: Mix difficulty levels as follows:
+- Questions 1-3: "easy" - Broad knowledge, warm-up questions (Worth 5 points)
+- Questions 4-7: "medium" - Main challenge, standard difficulty (Worth 10 points)  
+- Questions 8-10: "hard" - Expert level, challenging (Worth 15 points)
+
+You MUST set the "difficulty" field correctly for each question.
 """
         
         prompt = f"""Generate {num_questions} pub quiz questions for the genre: "{genre['name']}"

@@ -180,6 +180,15 @@ class QuizQuestion(models.Model):
     ]
     difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default='medium')
     
+    def get_points_value(self):
+        """Return point value based on difficulty"""
+        points_map = {
+            'easy': 5,
+            'medium': 10,
+            'hard': 15,
+        }
+        return points_map.get(self.difficulty, 10)
+    
     # Para rondas especiales y tipos de respuesta
     QUESTION_TYPE_CHOICES = [
         ('multiple_choice', 'Multiple Choice'),

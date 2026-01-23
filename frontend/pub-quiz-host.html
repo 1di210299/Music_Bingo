@@ -181,6 +181,31 @@
             text-transform: uppercase;
         }
 
+        .difficulty-badge {
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-weight: 800;
+            font-size: 0.9em;
+            margin-left: 10px;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .difficulty-easy {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .difficulty-medium {
+            background: #fbbf24;
+            color: #000;
+        }
+
+        .difficulty-hard {
+            background: #f87171;
+            color: #fff;
+        }
+
         .question-text {
             font-size: 2.5em;
             font-weight: 600;
@@ -433,6 +458,23 @@
                 </div>
             </div>
 
+            <!-- Difficulty Breakdown -->
+            <div id="difficultyBreakdown" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none;">
+                <div class="stat-label" style="margin-bottom: 10px;">📊 Current Round Difficulty</div>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <div style="flex: 1; background: #4ade80; height: 8px; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85em; opacity: 0.8;">Easy: <span id="easyCount">0</span></span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <div style="flex: 1; background: #fbbf24; height: 8px; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85em; opacity: 0.8;">Medium: <span id="mediumCount">0</span></span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <div style="flex: 1; background: #f87171; height: 8px; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85em; opacity: 0.8;">Hard: <span id="hardCount">0</span></span>
+                </div>
+            </div>
+
             <div class="stat-label" style="margin-bottom: 10px;">🎙️ TTS Voice</div>
             <select id="ttsVoice" class="btn btn-secondary" style="width: 100%; margin-bottom: 20px; text-align: left;">
                 <option value="daniel">Daniel (Male British)</option>
@@ -535,7 +577,10 @@
         <div class="main-panel">
             <div class="card" style="flex-grow: 1; display: flex; flex-direction: column;">
                 <div class="question-display" id="questionDisplay">
-                    <div class="genre-tag" id="currentGenre">Waiting for Host</div>
+                    <div>
+                        <span class="genre-tag" id="currentGenre">Waiting for Host</span>
+                        <span class="difficulty-badge difficulty-medium" id="difficultyBadge" style="display: none;"></span>
+                    </div>
                     <div class="question-text" id="questionText">Ready to start the Perfect DJ Experience?</div>
 
                     <div class="answer-display" id="answerDisplay">
@@ -843,6 +888,16 @@
             document.getElementById('questionText').textContent = question.text;
             document.getElementById('currentGenre').textContent = `${question.genre || 'General'} - Round ${question.round}, Q${question.number} (${question.points}pts)`;
 
+            // Update difficulty badge
+            const difficultyBadge = document.getElementById('difficultyBadge');
+            if (question.difficulty) {
+                difficultyBadge.textContent = `${question.difficulty} - ${question.points}pts`;
+                difficultyBadge.className = 'difficulty-badge difficulty-' + question.difficulty;
+                difficultyBadge.style.display = 'inline-block';
+            } else {
+                difficultyBadge.style.display = 'none';
+            }
+
             const answerDiv = document.getElementById('answerDisplay');
             // Only update answer display if it's a new question or status changed
             if (isNewQuestion || showingAnswer !== wasShowingAnswer) {
@@ -882,6 +937,38 @@
             }
 
             console.log('[SSE_UPDATE] ✅ Question display updated');
+            
+            // Update difficulty breakdown if round changed
+            if (roundChanged) {
+                updateDifficultyBreakdown(question.round);
+            }
+        }
+
+        async function updateDifficultyBreakdown(roundNumber) {
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/host-data`);
+                const data = await response.json();
+                
+                // Filter questions for current round
+                const roundQuestions = data.questions.filter(q => q.round_number === roundNumber);
+                
+                // Count difficulties
+                let easy = 0, medium = 0, hard = 0;
+                roundQuestions.forEach(q => {
+                    if (q.difficulty === 'easy') easy++;
+                    else if (q.difficulty === 'hard') hard++;
+                    else medium++; // default medium
+                });
+                
+                // Update UI
+                document.getElementById('easyCount').textContent = easy;
+                document.getElementById('mediumCount').textContent = medium;
+                document.getElementById('hardCount').textContent = hard;
+                document.getElementById('difficultyBreakdown').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error updating difficulty breakdown:', error);
+            }
         }
 
 
@@ -1151,6 +1238,17 @@
                     document.getElementById('questionText').textContent = question.question_text;
                     document.getElementById('currentGenre').textContent =
                         `${question.question_type === 'buzzer' ? '🚨 BUZZER ROUND' : 'Question'} (${question.difficulty ? question.difficulty.toUpperCase() : 'MEDIUM'})`;
+
+                    // Update difficulty badge
+                    const difficultyBadge = document.getElementById('difficultyBadge');
+                    if (question.difficulty) {
+                        const points = question.points || (question.difficulty === 'easy' ? 5 : question.difficulty === 'hard' ? 15 : 10);
+                        difficultyBadge.textContent = `${question.difficulty} - ${points}pts`;
+                        difficultyBadge.className = 'difficulty-badge difficulty-' + question.difficulty;
+                        difficultyBadge.style.display = 'inline-block';
+                    } else {
+                        difficultyBadge.style.display = 'none';
+                    }
 
                     if (!showingAnswer) {
                         document.getElementById('answerDisplay').style.display = 'none';

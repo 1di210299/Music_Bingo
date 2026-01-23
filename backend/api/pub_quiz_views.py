@@ -842,7 +842,8 @@ def quiz_stream(request, session_id):
                                     'fun_fact': question.fun_fact if session.status == 'revealing_answer' else None,
                                     'round': question.round_number,
                                     'number': question.question_number,
-                                    'points': question.points,
+                                    'points': question.get_points_value(),
+                                    'difficulty': question.difficulty,
                                     'type': question.question_type,
                                     'genre': question.genre.name if question.genre else 'General',
                                     'hints': question.hints,
@@ -992,7 +993,8 @@ def host_stream(request, session_id):
                                 'round': question.round_number,
                                 'number': question.question_number,
                                 'type': question.question_type,
-                                'points': question.points,
+                                'points': question.get_points_value(),
+                                'difficulty': question.difficulty,
                                 'genre': question.genre.name if question.genre else 'General',
                                 'options': question.options if question.question_type == 'multiple_choice' else None
                             }

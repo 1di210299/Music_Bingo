@@ -508,7 +508,9 @@
             </button>
             <div class="header">
                 <h2 id="roundTitle">Round 1</h2>
-                <div id="questionInfo" style="opacity: 0.7;">Question 1 / 40</div>
+                <div id="questionInfo" style="opacity: 0.7; display: flex; align-items: center; gap: 8px; justify-content: center;">
+                    Question 1 / 40
+                </div>
             </div>
 
             <div id="waitingScreen">
@@ -989,7 +991,19 @@
         function updateUI(status, question, teamAnswer = null) {
             if (document.getElementById('roundTitle')) {
                 document.getElementById('roundTitle').textContent = `Round ${question.round}`;
-                document.getElementById('questionInfo').textContent = `Question ${question.number}`;
+                const points = question.points || (question.difficulty === 'easy' ? 5 : question.difficulty === 'hard' ? 15 : 10);
+                const questionInfo = document.getElementById('questionInfo');
+                
+                // Create difficulty badge HTML
+                let difficultyColor = '#fbbf24'; // medium (yellow)
+                if (question.difficulty === 'easy') difficultyColor = '#4ade80'; // green
+                if (question.difficulty === 'hard') difficultyColor = '#f87171'; // red
+                
+                const difficultyHTML = question.difficulty ? 
+                    `Question ${question.number} <span style="background: ${difficultyColor}; color: #000; padding: 3px 10px; border-radius: 50px; font-weight: 800; font-size: 0.85em; text-transform: uppercase; margin-left: 6px;">${question.difficulty} - ${points}pts</span>` :
+                    `Question ${question.number}`;
+                    
+                questionInfo.innerHTML = difficultyHTML;
             }
             if (status === 'in_progress') {
                 if (question.type === 'buzzer') {
