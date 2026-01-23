@@ -850,9 +850,15 @@ def host_stream(request, session_id):
             try:
                 # Check for generation progress
                 progress_data = cache.get(f'quiz_generation_progress_{session_id}')
-                if progress_data and progress_data != last_progress:
-                    yield f"data: {json.dumps({'type': 'generation_progress', 'progress': progress_data['progress'], 'status': progress_data['status']})}\n\n"
-                    last_progress = progress_data
+                if progress_data:
+                    logger.info(f"🔍 [SSE] Found progress data for {session_id}: {progress_data}")
+                    if progress_data != last_progress:
+                        logger.info(f"📤 [SSE] Sending progress update: {progress_data}")
+                        yield f"data: {json.dumps({'type': 'generation_progress', 'progress': progress_data['progress'], 'status': progress_data['status']})}\n\n"
+                        last_progress = progress_data
+                else:
+                    if last_progress is not None:
+                        logger.info(f"🔍 [SSE] No progress data in cache for {session_id}")
                 
                 # Refresh session
                 session.refresh_from_db()
