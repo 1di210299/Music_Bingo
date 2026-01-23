@@ -455,11 +455,21 @@ def generate_quiz_questions(request, session_id):
 # ============================================================================
 
 @api_view(['GET'])
+@api_view(['GET'])
 def quiz_host_data(request, session_id):
     """Obtiene datos para la vista del host"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"📊 [HOST_DATA] Request for session {session_id}")
+    
     session = get_object_or_404(PubQuizSession, id=session_id)
     teams = session.teams.all().order_by('-total_score')
     rounds = session.rounds.all()
+    
+    # Get all questions for this session
+    questions = QuizQuestion.objects.filter(session=session).order_by('round_number', 'question_number')
+    
+    logger.info(f"✅ [HOST_DATA] Found {teams.count()} teams, {rounds.count()} rounds, {questions.count()} questions")
     
     return Response({
         'session': {
@@ -468,6 +478,8 @@ def quiz_host_data(request, session_id):
             'status': session.status,
             'current_round': session.current_round,
             'current_question': session.current_question,
+            'total_rounds': session.total_rounds,
+            'questions_per_round': session.questions_per_round,
         },
         'teams': [{
             'id': t.id,
@@ -480,6 +492,13 @@ def quiz_host_data(request, session_id):
             'round_name': r.round_name,
             'is_completed': r.is_completed
         } for r in rounds],
+        'questions': [{
+            'id': q.id,
+            'round_number': q.round_number,
+            'question_number': q.question_number,
+            'question_text': q.question_text,
+            'question_type': q.question_type
+        } for q in questions]
     })
 
 
