@@ -352,7 +352,8 @@ def generate_quiz_questions(request, session_id):
         logger.info(f"✅ [GENERATE_QUESTIONS] Session found: {session.session_code}, rounds: {session.total_rounds}, questions/round: {session.questions_per_round}")
         
         # Initialize progress
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 0, 'status': 'starting'}, 300)
+        session.generation_progress = {'progress': 0, 'status': 'starting'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 0% - starting (session: {session_id})")
         
         # Get question type preferences from request body (DRF parses automatically)
@@ -384,7 +385,8 @@ def generate_quiz_questions(request, session_id):
         selected_genres = generator.select_genres_by_votes(votes_dict, session.total_rounds)
         logger.info(f"✅ [GENERATE_QUESTIONS] Selected {len(selected_genres)} genres: {[g['name'] for g in selected_genres]}")
         
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 10, 'status': 'Selecting genres...'}, 300)
+        session.generation_progress = {'progress': 10, 'status': 'Selecting genres...'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 10% - Selecting genres... (session: {session_id})")
         
         # Crear estructura de rondas
@@ -395,7 +397,8 @@ def generate_quiz_questions(request, session_id):
             include_buzzer_round=False
         )
         
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 20, 'status': 'Creating quiz structure...'}, 300)
+        session.generation_progress = {'progress': 20, 'status': 'Creating quiz structure...'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 20% - Creating quiz structure... (session: {session_id})")
         
         # Crear rondas en DB primero (sin preguntas)
@@ -421,7 +424,8 @@ def generate_quiz_questions(request, session_id):
                 'questions_per_round': round_data['questions_per_round']
             })
         
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 30, 'status': 'Generating all questions (this may take 1-2 minutes)...'}, 300)
+        session.generation_progress = {'progress': 30, 'status': 'Generating all questions (this may take 1-2 minutes)...'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 30% - Generating all questions (this may take 1-2 minutes)... (session: {session_id})")
         logger.info(f"🤖 [GENERATE_QUESTIONS] Starting parallel question generation for {len(rounds_to_generate)} rounds")
         
@@ -452,15 +456,16 @@ def generate_quiz_questions(request, session_id):
                 # Update progress
                 progress = 30 + int(((idx + 1) / total_rounds) * 60)
                 status_msg = f'Generated {idx+1}/{total_rounds} rounds...'
-                cache.set(f'quiz_generation_progress_{session_id}', 
-                         {'progress': progress, 'status': status_msg}, 300)
+                session.generation_progress = {'progress': progress, 'status': status_msg}
+                session.save(update_fields=['generation_progress'])
                 logger.info(f"📊 [PROGRESS] {progress}% - {status_msg} (session: {session_id})")
         
         # Sort by round number
         all_round_questions.sort(key=lambda x: x['round_number'])
         
         # Save all questions to database
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 92, 'status': 'Saving questions to database...'}, 300)
+        session.generation_progress = {'progress': 92, 'status': 'Saving questions to database...'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 92% - Saving questions to database... (session: {session_id})")
         logger.info(f"💾 [GENERATE_QUESTIONS] Saving questions to database...")
         
@@ -485,7 +490,8 @@ def generate_quiz_questions(request, session_id):
                 total_questions_saved += 1
         
         logger.info(f"✅ [GENERATE_QUESTIONS] Saved {total_questions_saved} questions to database")
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 95, 'status': 'Finalizing quiz...'}, 300)
+        session.generation_progress = {'progress': 95, 'status': 'Finalizing quiz...'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 95% - Finalizing quiz... (session: {session_id})")
         
         # Actualizar estado de sesión
@@ -498,7 +504,8 @@ def generate_quiz_questions(request, session_id):
             genre = QuizGenre.objects.get(name=genre_data['name'])
             session.selected_genres.add(genre)
         
-        cache.set(f'quiz_generation_progress_{session_id}', {'progress': 100, 'status': 'Complete!'}, 300)
+        session.generation_progress = {'progress': 100, 'status': 'Complete!'}
+        session.save(update_fields=['generation_progress'])
         logger.info(f"📊 [PROGRESS] 100% - Complete! (session: {session_id})")
         logger.info(f"🎉 [GENERATE_QUESTIONS] Quiz generation completed successfully!")
         
@@ -511,7 +518,9 @@ def generate_quiz_questions(request, session_id):
     
     except Exception as e:
         logger.error(f"❌ [GENERATE_QUESTIONS] Error: {str(e)}", exc_info=True)
-        cache.delete(f'quiz_generation_progress_{session_id}')
+        if session:
+            session.generation_progress = None
+            session.save(update_fields=['generation_progress'])
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -759,6 +768,7 @@ def quiz_stream(request, session_id):
                                 answers.append({
                                     'team_id': ans.team.id,
                                     'team_name': ans.team.team_name,
+                                    'answer_text': ans.answer_text,
                                     'is_correct': ans.is_correct,
                                     'buzz_order': ans.buzz_order,
                                     'buzz_time': ans.buzz_timestamp.isoformat() if ans.buzz_timestamp else None,
@@ -848,8 +858,11 @@ def host_stream(request, session_id):
         
         while True:
             try:
+                # Refresh session to get latest progress
+                session.refresh_from_db()
+                
                 # Check for generation progress
-                progress_data = cache.get(f'quiz_generation_progress_{session_id}')
+                progress_data = session.generation_progress
                 if progress_data:
                     logger.info(f"🔍 [SSE] Found progress data for {session_id}: {progress_data}")
                     if progress_data != last_progress:
@@ -858,10 +871,7 @@ def host_stream(request, session_id):
                         last_progress = progress_data
                 else:
                     if last_progress is not None:
-                        logger.info(f"🔍 [SSE] No progress data in cache for {session_id}")
-                
-                # Refresh session
-                session.refresh_from_db()
+                        logger.info(f"🔍 [SSE] No progress data for {session_id}")
                 
                 # Check if session ended
                 if session.status == 'completed':

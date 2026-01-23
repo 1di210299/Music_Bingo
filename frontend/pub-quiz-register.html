@@ -932,7 +932,11 @@
                             // New question or question update
                             const question = data.question;
                             currentQuestionId = question.id;
-                            updateUI(data.session_status, question);
+                            
+                            // Check if this team already answered
+                            const teamAnswer = data.answers ? data.answers.find(a => a.team_id === teamId) : null;
+                            
+                            updateUI(data.session_status, question, teamAnswer);
                             break;
 
                         case 'status_change':
@@ -982,7 +986,7 @@
             });
         }
 
-        function updateUI(status, question) {
+        function updateUI(status, question, teamAnswer = null) {
             if (document.getElementById('roundTitle')) {
                 document.getElementById('roundTitle').textContent = `Round ${question.round}`;
                 document.getElementById('questionInfo').textContent = `Question ${question.number}`;
@@ -1019,12 +1023,28 @@
                             }
                         });
 
-                        // Reset selection if new question
-                        if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
+                        // Check if team already answered
+                        if (teamAnswer && teamAnswer.answer_text) {
+                            // Team already answered - show their selection and disable
+                            const selectedLetter = teamAnswer.answer_text;
                             document.querySelectorAll('.option-btn').forEach(btn => {
                                 btn.classList.remove('selected');
+                                if (btn.dataset.option === selectedLetter) {
+                                    btn.classList.add('selected');
+                                }
+                                btn.disabled = true;
                             });
                             document.getElementById('submitMCBtn').disabled = true;
+                            document.getElementById('submitMCBtn').textContent = '✅ Answer Submitted';
+                            selectedOption = selectedLetter;
+                        } else if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
+                            // New question - reset selection
+                            document.querySelectorAll('.option-btn').forEach(btn => {
+                                btn.classList.remove('selected');
+                                btn.disabled = false;
+                            });
+                            document.getElementById('submitMCBtn').disabled = true;
+                            document.getElementById('submitMCBtn').textContent = 'Submit Answer';
                             selectedOption = null;
                         }
                     } else {
@@ -1032,9 +1052,21 @@
                         document.getElementById('multipleChoiceContainer').style.display = 'none';
                         document.getElementById('answerFormContainer').style.display = 'block';
 
-                        if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
-                            document.getElementById('playerAnswer').value = '';
-                            document.getElementById('answerStatus').style.display = 'none';
+                        const answerInput = document.getElementById('playerAnswer');
+                        const answerStatus = document.getElementById('answerStatus');
+                        
+                        if (teamAnswer && teamAnswer.answer_text) {
+                            // Team already answered - show it and disable input
+                            answerInput.value = teamAnswer.answer_text;
+                            answerInput.disabled = true;
+                            answerStatus.textContent = '✅ Answer Submitted!';
+                            answerStatus.style.display = 'block';
+                            answerStatus.style.color = '#4ade80';
+                        } else if (lastKnownStatus !== 'in_progress' || question.number !== lastKnownQuestionNum) {
+                            // New question - clear input
+                            answerInput.value = '';
+                            answerInput.disabled = false;
+                            answerStatus.style.display = 'none';
                         }
                     }
                 }

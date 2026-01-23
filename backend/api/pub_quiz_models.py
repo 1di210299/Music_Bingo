@@ -63,6 +63,13 @@ class PubQuizSession(models.Model):
     # Géneros seleccionados (basado en votación)
     selected_genres = models.ManyToManyField(QuizGenre, blank=True)
     
+    # Generation progress (stored as JSON)
+    generation_progress = models.JSONField(
+        null=True, 
+        blank=True,
+        help_text="Progress data for question generation: {progress: int, status: str}"
+    )
+    
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
