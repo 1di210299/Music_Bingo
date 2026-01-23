@@ -12,7 +12,8 @@ def generate_unique_codes(apps, schema_editor):
     def generate_code():
         """Generate a random 8-character alphanumeric code"""
         chars = string.ascii_uppercase + string.digits
-        chars = chars.replace('O', '').replace('0', '').replace('I', '').replace('1')
+        # Remove confusing characters
+        chars = chars.replace('O', '').replace('0', '').replace('I', '').replace('1', '')
         return ''.join(secrets.choice(chars) for _ in range(8))
     
     existing_codes = set()
