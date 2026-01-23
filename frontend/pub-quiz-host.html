@@ -457,8 +457,11 @@
                 <button onclick="startQuiz()" class="btn btn-primary" id="btnStart">
                     <span>▶️ Start Quiz</span>
                 </button>
-                <button onclick="showQR()" class="btn btn-primary" style="grid-column: span 2;">
-                    <span>📱 Show QR Code for Teams</span>
+                <button onclick="showQR()" class="btn btn-primary">
+                    <span>📱 Show QR Code</span>
+                </button>
+                <button onclick="printAnswerSheets()" class="btn btn-primary">
+                    <span>🖨️ Print Answer Sheets</span>
                 </button>
                 <button onclick="generateQuestions()" class="btn btn-secondary">
                     <span>🔄 Generate</span>
@@ -1503,6 +1506,62 @@
             if (confirm('Are you sure you want to end this session?')) {
                 clearInterval(updateInterval);
                 window.location.href = '/index';
+            }
+        }
+
+        async function printAnswerSheets() {
+            const numSheets = prompt('How many answer sheets to print?', '30');
+            
+            if (numSheets === null) return; // User cancelled
+            
+            const sheets = parseInt(numSheets);
+            if (isNaN(sheets) || sheets <= 0 || sheets > 100) {
+                alert('❌ Please enter a number between 1 and 100');
+                return;
+            }
+
+            try {
+                // Show loading message
+                const originalText = event.target.textContent;
+                event.target.innerHTML = '<span>⏳ Generating PDF...</span>';
+                event.target.disabled = true;
+
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/generate-answer-sheets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_code: SESSION_ID,
+                        num_sheets: sheets
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate PDF');
+                }
+
+                // Download PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pub_quiz_answer_sheets_${SESSION_ID}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                alert(`✅ Downloaded ${sheets} answer sheets!`);
+
+            } catch (error) {
+                console.error('Error generating answer sheets:', error);
+                alert('❌ Error: ' + error.message);
+            } finally {
+                // Restore button
+                event.target.innerHTML = '<span>🖨️ Print Answer Sheets</span>';
+                event.target.disabled = false;
             }
         }
     </script>

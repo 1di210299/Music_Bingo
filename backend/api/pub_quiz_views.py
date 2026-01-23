@@ -1297,3 +1297,74 @@ def generate_quiz_tts(request):
     except Exception as e:
         logger.error(f'TTS generation error: {e}')
         return Response({'error': str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def generate_answer_sheets(request):
+    """
+    Generate printable answer sheets for a pub quiz session
+    
+    POST /api/pub-quiz/generate-answer-sheets/
+    Body: {
+        "session_code": "Y5SWRH0M",
+        "num_sheets": 30  (optional, default 30)
+    }
+    
+    Returns PDF file
+    """
+    from backend.generate_pub_quiz_cards import generate_blank_templates
+    from datetime import datetime
+    
+    try:
+        session_code = request.data.get('session_code')
+        num_sheets = request.data.get('num_sheets', 30)
+        
+        if not session_code:
+            return Response({'error': 'session_code required'}, status=400)
+        
+        # Get session
+        session = get_session_by_code_or_id(session_code)
+        if not session:
+            return Response({'error': 'Session not found'}, status=404)
+        
+        # Get session details
+        venue_name = session.venue_name or "Perfect DJ Pub Quiz"
+        session_date = session.created_at.strftime("%d/%m/%Y") if session.created_at else ""
+        
+        # Count rounds and questions
+        rounds = QuizRound.objects.filter(session=session).order_by('round_number')
+        total_rounds = rounds.count()
+        questions_per_round = 0
+        
+        if total_rounds > 0:
+            # Get questions from first round
+            first_round = rounds.first()
+            questions_per_round = QuizQuestion.objects.filter(round=first_round).count()
+        
+        # Default to 6 rounds, 10 questions if quiz not generated yet
+        if total_rounds == 0:
+            total_rounds = 6
+            questions_per_round = 10
+        
+        # Generate PDF
+        logger.info(f"Generating {num_sheets} answer sheets for session {session_code}")
+        pdf_buffer = generate_blank_templates(
+            venue_name=venue_name,
+            session_date=session_date,
+            total_rounds=total_rounds,
+            questions_per_round=questions_per_round,
+            num_sheets=num_sheets,
+            output_path=None
+        )
+        
+        # Create response
+        response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="pub_quiz_answer_sheets_{session_code}.pdf"'
+        
+        logger.info(f"Successfully generated answer sheets for {session_code}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error generating answer sheets: {e}")
+        return Response({'error': str(e)}, status=500)

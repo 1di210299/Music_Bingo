@@ -78,6 +78,7 @@ urlpatterns = [
     # path('pub-quiz/<str:session_id>/stats', ...)
     path('pub-quiz/<str:session_id>/qr-code', pub_quiz_views.generate_qr_code, name='pub-quiz-qr'),
     path('pub-quiz/tts', pub_quiz_views.generate_quiz_tts, name='pub-quiz-tts'),
+    path('pub-quiz/generate-answer-sheets', pub_quiz_views.generate_answer_sheets, name='pub-quiz-answer-sheets'),
     
     # ============================================================
     # KARAOKE ENDPOINTS
