@@ -61,27 +61,9 @@ def jingle_manager_view(request):
     return FileResponse(open(file_path, 'rb'))
 
 def pub_quiz_register_view(request):
-    import logging
-    import time
-    logger = logging.getLogger(__name__)
-    
-    start = time.time()
-    logger.info(f"🔵 START pub_quiz_register_view at {start}")
-    
     from django.http import HttpResponse
-    logger.info(f"⏱️ Imported HttpResponse in {time.time()-start:.3f}s")
-    
-    file_start = time.time()
     with open(FRONTEND_DIR / 'pub-quiz-register.html', 'rb') as f:
-        content = f.read()
-    logger.info(f"⏱️ Read file in {time.time()-file_start:.3f}s (total: {time.time()-start:.3f}s)")
-    
-    response_start = time.time()
-    response = HttpResponse(content, content_type='text/html')
-    logger.info(f"⏱️ Created response in {time.time()-response_start:.3f}s (total: {time.time()-start:.3f}s)")
-    
-    logger.info(f"✅ FINISH pub_quiz_register_view in {time.time()-start:.3f}s")
-    return response
+        return HttpResponse(f.read(), content_type='text/html')
 
 def pub_quiz_host_view(request):
     from django.http import HttpResponse

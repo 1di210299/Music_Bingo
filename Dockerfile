@@ -22,17 +22,14 @@ EXPOSE 8080
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_LOG_LEVEL=INFO
 
-# Create startup script with worker warmup
+# Create startup script (Django preload handled in wsgi.py)
 RUN echo '#!/bin/bash\n\
 set -e\n\
 echo "🔄 Running Django migrations..."\n\
 python manage.py migrate --noinput\n\
 echo "✅ Migrations complete"\n\
 echo ""\n\
-echo "🔥 Pre-warming Django application..."\n\
-python -c "import django; django.setup(); from django.core.management import execute_from_command_line; print(\"Django warmed up successfully\")"\n\
-echo ""\n\
-echo "🚀 Starting Gunicorn server..."\n\
+echo "🚀 Starting Gunicorn with preloaded Django (URLs loaded via wsgi.py)..."\n\
 exec gunicorn --workers 2 --bind 0.0.0.0:8080 --timeout 120 --preload --worker-class sync --worker-connections 1000 --access-logfile - --error-logfile - --log-level info wsgi:application' > /app/start.sh \
     && chmod +x /app/start.sh
 
