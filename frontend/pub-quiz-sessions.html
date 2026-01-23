@@ -523,6 +523,7 @@
         }
 
         async function createSession(event) {
+            console.log('🎬 [CREATE_SESSION] Starting session creation...');
             event.preventDefault();
 
             const submitBtn = event.target.querySelector('button[type="submit"]');
@@ -540,34 +541,51 @@
                 duration_minutes: 120
             };
 
+            console.log('📋 [CREATE_SESSION] Form data:', formData);
+            console.log('🌐 [CREATE_SESSION] Target URL:', `${BASE_URL}/api/pub-quiz/create-session`);
+
             try {
+                console.log('📤 [CREATE_SESSION] Sending POST request...');
                 const response = await fetch(`${BASE_URL}/api/pub-quiz/create-session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
 
+                console.log('📥 [CREATE_SESSION] Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ [CREATE_SESSION] HTTP Error:', response.status, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
                 const data = await response.json();
+                console.log('📦 [CREATE_SESSION] Response data:', data);
 
                 if (data.success) {
+                    console.log('✅ [CREATE_SESSION] Session created successfully! ID:', data.session_id);
                     submitBtn.innerHTML = '✅ Session Created!';
 
                     // Pequeño delay para mostrar el mensaje
                     setTimeout(() => {
+                        console.log('🚀 [CREATE_SESSION] Redirecting to host dashboard...');
                         hideCreateModal();
                         // Redirect to host dashboard
                         window.location.href = `/pub-quiz-host.html?session=${data.session_id}`;
                     }, 800);
                 } else {
+                    console.error('❌ [CREATE_SESSION] Server returned success=false:', data.error);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
                     alert('Error creating session: ' + data.error);
                 }
             } catch (error) {
-                console.error('Error creating session:', error);
+                console.error('💥 [CREATE_SESSION] Exception caught:', error);
+                console.error('💥 [CREATE_SESSION] Error stack:', error.stack);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
-                alert('Failed to create session');
+                alert('Failed to create session: ' + error.message);
             }
         }
 

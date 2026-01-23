@@ -72,23 +72,40 @@ def get_sessions(request):
 @api_view(['POST'])
 def create_quiz_session(request):
     """Crea una nueva sesión de Pub Quiz"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info(f"🎬 [CREATE_SESSION] Received request to create session")
+        logger.info(f"📋 [CREATE_SESSION] Request data: {request.data}")
+        
         data = request.data
         
+        venue_name = data.get('venue_name', 'The Pub')
+        host_name = data.get('host_name', 'Perfect DJ')
+        total_rounds = data.get('total_rounds', 6)
+        questions_per_round = data.get('questions_per_round', 10)
+        duration_minutes = data.get('duration_minutes', 120)
+        
+        logger.info(f"📝 [CREATE_SESSION] Creating session: venue={venue_name}, host={host_name}, rounds={total_rounds}, q/round={questions_per_round}")
+        
         session = PubQuizSession.objects.create(
-            venue_name=data.get('venue_name', 'The Pub'),
-            host_name=data.get('host_name', 'Perfect DJ'),
-            total_rounds=data.get('total_rounds', 6),
-            questions_per_round=data.get('questions_per_round', 10),
-            duration_minutes=data.get('duration_minutes', 120),
+            venue_name=venue_name,
+            host_name=host_name,
+            total_rounds=total_rounds,
+            questions_per_round=questions_per_round,
+            duration_minutes=duration_minutes,
             status='registration',
         )
         
+        logger.info(f"✅ [CREATE_SESSION] Session created successfully! ID: {session.id}")
+        
         # Asegurarse de que los géneros estén inicializados
         if QuizGenre.objects.count() == 0:
+            logger.info(f"🔧 [CREATE_SESSION] Initializing genres...")
             initialize_genres_in_db()
         
-        return Response({
+        response_data = {
             'success': True,
             'session_id': session.id,
             'session': {
@@ -98,9 +115,15 @@ def create_quiz_session(request):
                 'total_rounds': session.total_rounds,
                 'questions_per_round': session.questions_per_round,
             }
-        }, status=status.HTTP_201_CREATED)
+        }
+        
+        logger.info(f"📤 [CREATE_SESSION] Returning response: {response_data}")
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
     
     except Exception as e:
+        logger.error(f"❌ [CREATE_SESSION] Exception: {str(e)}")
+        logger.exception(e)
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
