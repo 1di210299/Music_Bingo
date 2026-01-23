@@ -24,6 +24,28 @@ from .pub_quiz_models import (
     PubQuizSession, QuizTeam, QuizGenre, QuizQuestion,
     QuizRound, TeamAnswer, BuzzerDevice, GenreVote
 )
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def get_session_by_code_or_id(session_identifier):
+    """
+    Get session by session_code (string) or id (int).
+    This allows backward compatibility with numeric IDs.
+    """
+    try:
+        # Try as session_code first
+        return PubQuizSession.objects.get(session_code=session_identifier)
+    except (PubQuizSession.DoesNotExist, ValueError):
+        try:
+            # Fallback to numeric ID
+            return PubQuizSession.objects.get(id=int(session_identifier))
+        except (PubQuizSession.DoesNotExist, ValueError):
+            return None
 from .pub_quiz_generator import PubQuizGenerator, initialize_genres_in_db
 
 logger = logging.getLogger(__name__)
@@ -107,9 +129,10 @@ def create_quiz_session(request):
         
         response_data = {
             'success': True,
-            'session_id': session.id,
+            'session_id': session.session_code,  # Use session_code instead of id
             'session': {
                 'id': session.id,
+                'session_code': session.session_code,
                 'venue_name': session.venue_name,
                 'status': session.status,
                 'total_rounds': session.total_rounds,

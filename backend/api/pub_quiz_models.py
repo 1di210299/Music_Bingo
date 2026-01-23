@@ -6,6 +6,7 @@ Basado en la especificación extraída de los PDFs
 from django.db import models
 from django.utils import timezone
 import json
+import secrets
 
 
 class QuizGenre(models.Model):
@@ -29,6 +30,13 @@ class QuizGenre(models.Model):
 class PubQuizSession(models.Model):
     """Sesión de Pub Quiz (un evento completo)"""
     
+    session_code = models.CharField(
+        max_length=8, 
+        unique=True, 
+        editable=False,
+        default='TEMP0000',  # Temporary default for migration
+        help_text="Random 8-character code for URL access"
+    )
     venue_name = models.CharField(max_length=200)
     host_name = models.CharField(max_length=200, default="Perfect DJ")
     date = models.DateTimeField(default=timezone.now)
@@ -67,6 +75,16 @@ class PubQuizSession(models.Model):
         ordering = ['-date']
         verbose_name = "Pub Quiz Session"
         verbose_name_plural = "Pub Quiz Sessions"
+    
+    def save(self, *args, **kwargs):
+        if not self.session_code:
+            # Generate unique 8-character alphanumeric code (uppercase)
+            while True:
+                code = secrets.token_urlsafe(6)[:8].upper().replace('-', '0').replace('_', '1')
+                if not PubQuizSession.objects.filter(session_code=code).exists():
+                    self.session_code = code
+                    break
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.venue_name} - {self.date.strftime('%Y-%m-%d %H:%M')}"
