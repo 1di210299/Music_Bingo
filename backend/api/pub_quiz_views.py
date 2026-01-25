@@ -599,7 +599,7 @@ def start_quiz(request, session_id):
     session.status = 'in_progress'
     session.current_round = 1
     session.current_question = 1
-    session.question_started_at = timezone.now()  # Mark when question started
+    # question_started_at will be set by start_countdown endpoint after TTS completes
     session.save()
     
     # Marcar primera ronda como iniciada
@@ -621,6 +621,22 @@ def start_quiz(request, session_id):
         'success': True, 
         'status': 'in_progress',
         'welcome_message': welcome_message
+    })
+
+
+@api_view(['POST'])
+def start_countdown(request, session_id):
+    """Marca el inicio del countdown después de que TTS termine"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    session.question_started_at = timezone.now()
+    session.save()
+    
+    return Response({
+        'success': True,
+        'question_started_at': session.question_started_at.isoformat()
     })
 
 
@@ -1347,28 +1363,48 @@ def generate_answer_sheets(request):
         venue_name = session.venue_name or "Perfect DJ Pub Quiz"
         session_date = session.created_at.strftime("%d/%m/%Y") if session.created_at else ""
         
-        # Count rounds and questions
+        # Get all questions organized by round
+        questions_by_round = []
         rounds = QuizRound.objects.filter(session=session).order_by('round_number')
-        total_rounds = rounds.count()
-        questions_per_round = 0
         
-        if total_rounds > 0:
-            # Get questions from first round
-            first_round = rounds.first()
-            questions_per_round = QuizQuestion.objects.filter(round=first_round).count()
+        for round_obj in rounds:
+            questions = QuizQuestion.objects.filter(
+                session=session, 
+                round_number=round_obj.round_number
+            ).order_by('question_number')
+            
+            round_questions = []
+            for q in questions:
+                question_data = {
+                    'number': q.question_number,
+                    'text': q.question_text,
+                    'type': q.question_type,
+                    'genre': round_obj.genre.name if round_obj.genre else 'General'
+                }
+                
+                # Add options for multiple choice
+                if q.question_type == 'multiple_choice' and q.options:
+                    question_data['options'] = q.options
+                
+                round_questions.append(question_data)
+            
+            if round_questions:
+                questions_by_round.append({
+                    'round_number': round_obj.round_number,
+                    'genre': round_obj.genre.name if round_obj.genre else 'General',
+                    'questions': round_questions
+                })
         
-        # Default to 6 rounds, 10 questions if quiz not generated yet
-        if total_rounds == 0:
-            total_rounds = 6
-            questions_per_round = 10
+        # If no questions generated yet, return error
+        if not questions_by_round:
+            return Response({'error': 'Please generate quiz questions first before printing answer sheets'}, status=400)
         
-        # Generate PDF
-        logger.info(f"Generating {num_sheets} answer sheets for session {session_code}")
+        # Generate PDF with actual questions
+        logger.info(f"Generating {num_sheets} answer sheets with questions for session {session_code}")
         pdf_buffer = generate_blank_templates(
             venue_name=venue_name,
             session_date=session_date,
-            total_rounds=total_rounds,
-            questions_per_round=questions_per_round,
+            questions_by_round=questions_by_round,
             num_sheets=num_sheets,
             output_path=None
         )

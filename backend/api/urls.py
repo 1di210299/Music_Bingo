@@ -62,6 +62,7 @@ urlpatterns = [
     path('pub-quiz/<str:session_id>/generate-questions', pub_quiz_views.generate_quiz_questions, name='pub-quiz-generate'),
     path('pub-quiz/<str:session_id>/host-data', pub_quiz_views.quiz_host_data, name='pub-quiz-host-data'),
     path('pub-quiz/<str:session_id>/start', pub_quiz_views.start_quiz, name='pub-quiz-start'),
+    path('pub-quiz/<str:session_id>/start-countdown', pub_quiz_views.start_countdown, name='pub-quiz-start-countdown'),
     path('pub-quiz/<str:session_id>/reset', pub_quiz_views.reset_quiz, name='pub-quiz-reset'),
     path('pub-quiz/<str:session_id>/delete', pub_quiz_views.delete_session, name='pub-quiz-delete'),
     path('pub-quiz/<str:session_id>/next', pub_quiz_views.next_question, name='pub-quiz-next'),

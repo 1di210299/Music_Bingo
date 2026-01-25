@@ -947,16 +947,31 @@
                     const roundAnnouncement = `Round ${question.round}: ${question.genre}`;
                     playTTS(roundAnnouncement, 'daniel').then(() => {
                         console.log('[TTS] Auto-playing question:', question.text);
-                        playTTS(question.text, 'daniel');
+                        return playTTS(question.text, 'daniel');
+                    }).then(() => {
+                        // Start countdown after TTS completes
+                        console.log('[COUNTDOWN] Starting countdown after round announcement + question');
+                        return fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                            method: 'POST'
+                        });
                     }).catch(err => {
                         console.error('[TTS] Error playing round announcement:', err);
                         // Still play the question even if round announcement fails
-                        playTTS(question.text, 'daniel');
+                        playTTS(question.text, 'daniel').then(() => {
+                            return fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                                method: 'POST'
+                            });
+                        });
                     });
                 } else {
-                    // Just play the question
+                    // Just play the question, then start countdown
                     console.log('[TTS] Auto-playing question:', question.text);
-                    playTTS(question.text, 'daniel');
+                    playTTS(question.text, 'daniel').then(() => {
+                        console.log('[COUNTDOWN] Starting countdown after question');
+                        return fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                            method: 'POST'
+                        });
+                    });
                 }
             }
 
@@ -1128,19 +1143,31 @@
                     document.getElementById('btnNext').disabled = false;
                     // Bloquear TTS automático de preguntas durante el mensaje de bienvenida
                     isPlayingWelcomeMessage = true;
+                    
                     // Reproducir mensaje de bienvenida primero
                     if (data.welcome_message) {
                         await playTTS(data.welcome_message, 'daniel');
                     }
+                    
                     // Desbloquear TTS automático
                     isPlayingWelcomeMessage = false;
-                    // Reproducir la primera pregunta si ya está disponible
+                    
+                    // Anunciar género de la primera ronda
                     if (currentQuestion) {
+                        const genre = currentQuestion.genre || 'General';
+                        await playTTS(`Round 1: ${genre}`, 'daniel');
+                        
+                        // Reproducir la primera pregunta
                         lastSpokenQuestionId = currentQuestion.id;
                         await playTTS(currentQuestion.text, 'daniel');
+                        
+                        // AHORA iniciar el countdown después de que todo el TTS terminó
+                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                            method: 'POST'
+                        });
                     }
 
-                    console.log('✅ Quiz started - SSE will update the question display');
+                    console.log('✅ Quiz started - countdown will begin after TTS');
                 } else {
                     alert('Error: ' + (data.error || 'Could not start quiz'));
                 }
@@ -1538,6 +1565,7 @@
                 
                 // Auto-advance when time is up (only if enabled and not paused)
                 if (autoAdvanceEnabled && !autoAdvancePaused && remaining === 0) {
+                    console.log('⏰ Timer reached 0 - auto-advancing to next question');
                     nextQuestion();
                 }
             }, 1000);
