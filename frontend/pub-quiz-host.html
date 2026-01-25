@@ -587,6 +587,10 @@
                 <div class="section-title">⏱️ Auto-Advance Timer</div>
             <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 2em; font-weight: 800; color: var(--accent); text-align: center;" id="countdown">--</div>
+                        <div style="font-size: 0.75em; opacity: 0.7; text-align: center;">seconds remaining</div>
+                    </div>
                     <button onclick="toggleAutoAdvance()" class="btn btn-secondary" id="btnToggleAuto" style="padding: 5px 15px; font-size: 0.8em;">
                         <span id="autoAdvanceLabel">Enable</span>
                     </button>
@@ -594,15 +598,12 @@
                 
                 <!-- Timer Display (shown when auto-advance is enabled) -->
                 <div id="timerDisplay" style="display: none;">
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
-                        <div style="flex: 1; text-align: center;">
-                            <div style="font-size: 2.5em; font-weight: 800; color: var(--accent);" id="countdown">15</div>
-                            <div style="font-size: 0.8em; opacity: 0.7;">seconds remaining</div>
-                        </div>
-                        <button onclick="pauseAutoAdvance()" class="btn btn-secondary" id="btnPauseTimer" style="padding: 8px 15px;">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                        <button onclick="pauseAutoAdvance()" class="btn btn-secondary" id="btnPauseTimer" style="padding: 8px 15px; width: 100%;">
                             <span id="pauseLabel">⏸️ Pause</span>
                         </button>
                     </div>
+                    
                     
                     <!-- Timer Settings -->
                     <div style="display: flex; gap: 10px; align-items: center;">
@@ -1497,21 +1498,23 @@
                 autoAdvanceLabel.textContent = 'Disable';
                 btnToggleAuto.classList.add('btn-primary');
                 btnToggleAuto.classList.remove('btn-secondary');
-                startCountdown();
             } else {
                 timerDisplay.style.display = 'none';
                 autoAdvanceLabel.textContent = 'Enable';
                 btnToggleAuto.classList.remove('btn-primary');
                 btnToggleAuto.classList.add('btn-secondary');
-                stopCountdown();
             }
+            
+            // Always run countdown to show time, regardless of auto-advance
+            startCountdown();
         }
 
         function startCountdown() {
             stopCountdown(); // Clear any existing interval
             
             countdownInterval = setInterval(() => {
-                if (!autoAdvanceEnabled || autoAdvancePaused || !questionStartedAt) {
+                if (!questionStartedAt) {
+                    document.getElementById('countdown').textContent = '--';
                     return;
                 }
                 
@@ -1533,8 +1536,8 @@
                     countdownEl.style.color = 'var(--accent)';
                 }
                 
-                // Auto-advance when time is up
-                if (remaining === 0) {
+                // Auto-advance when time is up (only if enabled and not paused)
+                if (autoAdvanceEnabled && !autoAdvancePaused && remaining === 0) {
                     nextQuestion();
                 }
             }, 1000);
