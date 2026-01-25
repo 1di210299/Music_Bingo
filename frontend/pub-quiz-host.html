@@ -1152,6 +1152,13 @@
         async function generateQuestions() {
             console.log('🎯 [FE_GENERATE] Button clicked - starting generation process');
             
+            // Check if there are registered teams
+            const teamsCount = parseInt(document.getElementById('statTeams').textContent) || 0;
+            if (teamsCount === 0) {
+                alert('⚠️ You need at least one registered team before generating questions!\n\nPlease wait for teams to register and vote for genres.');
+                return;
+            }
+            
             if (!confirm('Generate quiz questions based on team votes?')) {
                 console.log('❌ [FE_GENERATE] User cancelled');
                 return;
