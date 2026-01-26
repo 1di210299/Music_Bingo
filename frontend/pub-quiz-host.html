@@ -669,7 +669,17 @@
             <div id="qrcode" style="display: flex; justify-content: center; margin: 20px 0;"></div>
             <div style="background: rgba(0, 242, 254, 0.1); padding: 15px; border-radius: 12px; margin: 20px 0;">
                 <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">Or visit:</p>
-                <p id="qrUrl" style="font-size: 1.1em; font-weight: 600; word-break: break-all;"></p>
+                <p id="qrUrl" style="font-size: 1.1em; font-weight: 600; word-break: break-all; margin-bottom: 10px;"></p>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="openRegistrationUrl()" class="btn btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span>🔗</span>
+                        <span>Open Link</span>
+                    </button>
+                    <button onclick="copyUrlToClipboard()" class="btn btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <span id="copyIcon">📋</span>
+                        <span id="copyText">Copy Link</span>
+                    </button>
+                </div>
             </div>
             <button onclick="hideQR()" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Close</button>
         </div>
@@ -1662,6 +1672,65 @@
 
         function hideQR() {
             document.getElementById('qrModal').style.display = 'none';
+            // Reset button text after closing
+            setTimeout(() => {
+                document.getElementById('copyIcon').textContent = '📋';
+                document.getElementById('copyText').textContent = 'Copy Link';
+            }, 300);
+        }
+
+        function openRegistrationUrl() {
+            const url = document.getElementById('qrUrl').textContent;
+            window.open(url, '_blank');
+            console.log('🔗 Opened registration URL in new tab:', url);
+        }
+
+        async function copyUrlToClipboard() {
+            const url = document.getElementById('qrUrl').textContent;
+            const copyIcon = document.getElementById('copyIcon');
+            const copyText = document.getElementById('copyText');
+            
+            try {
+                // Modern Clipboard API (works on HTTPS and localhost)
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                    console.log('✅ URL copied to clipboard via Clipboard API');
+                } else {
+                    // Fallback for older browsers or non-HTTPS
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        console.log('✅ URL copied to clipboard via execCommand');
+                    } catch (err) {
+                        console.error('❌ Failed to copy:', err);
+                        alert('❌ Could not copy. Please copy manually.');
+                        return;
+                    } finally {
+                        document.body.removeChild(textArea);
+                    }
+                }
+                
+                // Visual feedback
+                copyIcon.textContent = '✅';
+                copyText.textContent = 'Copied!';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    copyIcon.textContent = '📋';
+                    copyText.textContent = 'Copy Link';
+                }, 2000);
+                
+            } catch (err) {
+                console.error('❌ Copy failed:', err);
+                alert('❌ Could not copy to clipboard. Please copy manually.');
+            }
         }
 
         async function resetQuiz() {
