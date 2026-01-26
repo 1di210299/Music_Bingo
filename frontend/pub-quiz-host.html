@@ -1764,6 +1764,12 @@
         }
 
         async function printAnswerSheets() {
+            // Check if questions have been generated
+            if (!questionsGenerated) {
+                alert('⚠️ Please generate quiz questions first!\n\nClick the "🔄 Generate" button to create questions before printing answer sheets.');
+                return;
+            }
+            
             const numSheets = prompt('How many answer sheets to print?', '30');
             
             if (numSheets === null) return; // User cancelled
