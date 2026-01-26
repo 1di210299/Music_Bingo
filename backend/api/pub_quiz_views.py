@@ -1344,7 +1344,7 @@ def generate_answer_sheets(request):
     
     Returns PDF file
     """
-    from backend.generate_pub_quiz_cards import generate_blank_templates
+    from generate_pub_quiz_cards import generate_blank_templates
     from datetime import datetime
     
     try:
