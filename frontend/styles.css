@@ -436,6 +436,7 @@ button:disabled {
     box-sizing: border-box;
     background: white;
     cursor: pointer;
+    color: #2c3e50;
 }
 
 .setup-field select[multiple] {
@@ -448,6 +449,8 @@ button:disabled {
     border-radius: 6px;
     margin: 2px 0;
     cursor: pointer;
+    color: #2c3e50;
+    background: white;
 }
 
 .setup-field select option:checked {
@@ -1010,6 +1013,13 @@ button:disabled {
     padding: 8px;
     border-radius: 5px;
     border: none;
+    color: #2c3e50;
+    background: white;
+}
+
+.config-panel select option {
+    color: #2c3e50;
+    background: white;
 }
 
 /* ==================== JINGLE MANAGER STYLES ==================== */
@@ -1315,6 +1325,12 @@ button:disabled {
     transition: all 0.3s ease;
     color: #2c3e50;
     background: white;
+}
+
+.form-group select option {
+    color: #2c3e50;
+    background: white;
+    padding: 8px;
 }
 
 .form-group input:focus,
