@@ -710,7 +710,7 @@ def next_question(request, session_id):
     
     if session.current_question < total_questions_in_round:
         session.current_question += 1
-        session.question_started_at = timezone.now()  # Mark when question started
+        session.question_started_at = None  # Will be set by frontend after TTS
     else:
         # Siguiente ronda
         current_round = session.rounds.filter(round_number=session.current_round).first()
@@ -722,7 +722,7 @@ def next_question(request, session_id):
         if session.current_round < session.total_rounds:
             session.current_round += 1
             session.current_question = 1
-            session.question_started_at = timezone.now()  # Mark when question started
+            session.question_started_at = None  # Will be set by frontend after TTS
             
             # Verificar si es halftime
             next_round = session.rounds.filter(round_number=session.current_round).first()

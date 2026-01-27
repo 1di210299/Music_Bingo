@@ -983,21 +983,29 @@
                     playTTS(roundAnnouncement, 'daniel').then(() => {
                         console.log('[TTS] Auto-playing question:', question.text);
                         return playTTS(question.text, 'daniel');
-                    }).then(() => {
-                        // Countdown already started by backend when question began
-                        console.log('[TTS] ✅ TTS completed - countdown already running from backend');
+                    }).then(async () => {
+                        console.log('[TTS] ✅ TTS completed - starting countdown now');
+                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                            method: 'POST'
+                        });
                     }).catch(err => {
                         console.error('[TTS] Error playing round announcement:', err);
                         // Still play the question even if round announcement fails
-                        playTTS(question.text, 'daniel').then(() => {
-                            console.log('[TTS] ✅ Question TTS completed - countdown already running from backend');
+                        playTTS(question.text, 'daniel').then(async () => {
+                            console.log('[TTS] ✅ Question TTS completed - starting countdown now');
+                            await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                                method: 'POST'
+                            });
                         });
                     });
                 } else {
-                    // Just play the question - countdown already running from backend
+                    // Just play the question, then start countdown
                     console.log('[TTS] Auto-playing question:', question.text);
-                    playTTS(question.text, 'daniel').then(() => {
-                        console.log('[TTS] ✅ Question TTS completed - countdown already running from backend');
+                    playTTS(question.text, 'daniel').then(async () => {
+                        console.log('[TTS] ✅ Question TTS completed - starting countdown now');
+                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                            method: 'POST'
+                        });
                     });
                 }
             }
