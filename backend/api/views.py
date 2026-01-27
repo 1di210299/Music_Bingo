@@ -1473,3 +1473,156 @@ def venue_config(request, venue_name):
         except Exception as e:
             logger.error(f"Error saving venue config: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)
+
+
+# ============================================================================
+# BINGO SESSION MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@api_view(['POST', 'GET'])
+def bingo_sessions(request):
+    """
+    Create or list bingo sessions
+    POST: Create new session
+    GET: List all sessions (with optional venue filter)
+    """
+    from .models import BingoSession
+    
+    if request.method == 'POST':
+        try:
+            data = request.data
+            
+            # Generate unique session ID
+            session_id = str(uuid.uuid4())
+            
+            # Create session
+            session = BingoSession.objects.create(
+                session_id=session_id,
+                venue_name=data.get('venue_name', ''),
+                host_name=data.get('host_name', ''),
+                num_players=data.get('num_players', 25),
+                voice_id=data.get('voice_id', 'JBFqnCBsd6RMkjVDRZzb'),
+                decades=data.get('decades', ['1960s', '1970s', '1980s', '1990s']),
+                logo_url=data.get('logo_url', ''),
+                social_media=data.get('social_media', ''),
+                include_qr=data.get('include_qr', False),
+                prizes=data.get('prizes', {}),
+                status='pending'
+            )
+            
+            logger.info(f"Created bingo session: {session_id} for {session.venue_name}")
+            
+            return Response({
+                'success': True,
+                'session_id': session_id,
+                'message': 'Session created successfully'
+            }, status=201)
+            
+        except Exception as e:
+            logger.error(f"Error creating bingo session: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+    
+    else:  # GET
+        try:
+            venue_name = request.GET.get('venue')
+            
+            if venue_name:
+                sessions = BingoSession.objects.filter(venue_name__icontains=venue_name)
+            else:
+                sessions = BingoSession.objects.all()[:50]  # Limit to 50 recent
+            
+            sessions_data = []
+            for session in sessions:
+                sessions_data.append({
+                    'session_id': session.session_id,
+                    'venue_name': session.venue_name,
+                    'host_name': session.host_name,
+                    'num_players': session.num_players,
+                    'status': session.status,
+                    'songs_count': session.get_songs_count(),
+                    'duration_minutes': session.get_duration_minutes(),
+                    'created_at': session.created_at.isoformat(),
+                    'started_at': session.started_at.isoformat() if session.started_at else None,
+                    'completed_at': session.completed_at.isoformat() if session.completed_at else None
+                })
+            
+            return Response({
+                'sessions': sessions_data,
+                'total': len(sessions_data)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error listing bingo sessions: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+def bingo_session_detail(request, session_id):
+    """
+    Get, update, or delete a specific bingo session
+    """
+    from .models import BingoSession
+    
+    try:
+        session = BingoSession.objects.get(session_id=session_id)
+    except BingoSession.DoesNotExist:
+        return Response({'error': 'Session not found'}, status=404)
+    
+    if request.method == 'GET':
+        return Response({
+            'session_id': session.session_id,
+            'venue_name': session.venue_name,
+            'host_name': session.host_name,
+            'num_players': session.num_players,
+            'voice_id': session.voice_id,
+            'decades': session.decades,
+            'logo_url': session.logo_url,
+            'social_media': session.social_media,
+            'include_qr': session.include_qr,
+            'prizes': session.prizes,
+            'songs_played': session.songs_played,
+            'current_song_index': session.current_song_index,
+            'status': session.status,
+            'created_at': session.created_at.isoformat(),
+            'started_at': session.started_at.isoformat() if session.started_at else None,
+            'completed_at': session.completed_at.isoformat() if session.completed_at else None
+        })
+    
+    elif request.method == 'PUT':
+        try:
+            data = request.data
+            
+            # Update allowed fields
+            if 'songs_played' in data:
+                session.songs_played = data['songs_played']
+            if 'current_song_index' in data:
+                session.current_song_index = data['current_song_index']
+            if 'status' in data:
+                session.status = data['status']
+                if data['status'] == 'active' and not session.started_at:
+                    session.started_at = datetime.now()
+                elif data['status'] == 'completed' and not session.completed_at:
+                    session.completed_at = datetime.now()
+            
+            session.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Session updated successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating bingo session: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+    
+    elif request.method == 'DELETE':
+        try:
+            session.delete()
+            return Response({
+                'success': True,
+                'message': 'Session deleted successfully'
+            })
+        except Exception as e:
+            logger.error(f"Error deleting bingo session: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+

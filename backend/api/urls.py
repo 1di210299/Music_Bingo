@@ -82,6 +82,12 @@ urlpatterns = [
     path('pub-quiz/generate-answer-sheets', pub_quiz_views.generate_answer_sheets, name='pub-quiz-answer-sheets'),
     
     # ============================================================
+    # BINGO SESSION ENDPOINTS
+    # ============================================================
+    path('bingo/sessions', views.bingo_sessions, name='bingo-sessions'),  # POST: Create, GET: List
+    path('bingo/session/<str:session_id>', views.bingo_session_detail, name='bingo-session-detail'),  # GET/PUT/DELETE
+    
+    # ============================================================
     # KARAOKE ENDPOINTS
     # ============================================================
     # Session Management

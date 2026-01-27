@@ -438,3 +438,120 @@ class KaraokeQueue(models.Model):
         avg_duration = self.session.avg_song_duration
         wait_seconds = ahead * avg_duration
         return round(wait_seconds / 60)
+
+
+class BingoSession(models.Model):
+    """
+    Music Bingo game session with configuration and state
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Session Identification
+    session_id = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique session identifier (UUID)"
+    )
+    
+    # Venue Information
+    venue_name = models.CharField(
+        max_length=200,
+        help_text="Pub or venue name"
+    )
+    host_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Optional host/DJ name"
+    )
+    
+    # Game Configuration
+    num_players = models.IntegerField(
+        default=25,
+        validators=[MinValueValidator(5), MaxValueValidator(100)],
+        help_text="Number of players (affects song selection)"
+    )
+    voice_id = models.CharField(
+        max_length=100,
+        default='JBFqnCBsd6RMkjVDRZzb',
+        help_text="ElevenLabs voice ID for announcements"
+    )
+    decades = models.JSONField(
+        default=list,
+        help_text="Selected decades (e.g., ['1960s', '1970s', '1980s'])"
+    )
+    
+    # Branding (Optional)
+    logo_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="URL to pub logo"
+    )
+    social_media = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Social media URL for QR code"
+    )
+    include_qr = models.BooleanField(
+        default=False,
+        help_text="Include QR code on cards"
+    )
+    
+    # Prizes
+    prizes = models.JSONField(
+        default=dict,
+        help_text="Prize information (4corners, first_line, full_house)"
+    )
+    
+    # Game State
+    songs_played = models.JSONField(
+        default=list,
+        help_text="Array of song IDs that have been played"
+    )
+    current_song_index = models.IntegerField(
+        default=0,
+        help_text="Current position in song pool"
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        help_text="Current session status"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['venue_name', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.venue_name} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_duration_minutes(self):
+        """Calculate session duration in minutes"""
+        if not self.started_at:
+            return 0
+        end_time = self.completed_at or datetime.now()
+        duration = end_time - self.started_at
+        return round(duration.total_seconds() / 60)
+    
+    def get_songs_count(self):
+        """Get number of songs played"""
+        return len(self.songs_played)
+
