@@ -734,9 +734,13 @@ def next_question(request, session_id):
     
     # 🔧 FIX: Si estamos en halftime, el primer "Next" debe pasar a in_progress
     if session.status == 'halftime':
+        logger.info(f"▶️ [HALFTIME] Currently in halftime status")
+        logger.info(f"▶️ [HALFTIME] Round: {session.current_round}, Question: {session.current_question}")
+        logger.info(f"▶️ [HALFTIME] User clicked Next - resuming to 'in_progress'")
         session.status = 'in_progress'
         session.save()
-        logger.info(f"▶️ [NEXT] Resuming from halftime to in_progress")
+        logger.info(f"✅ [HALFTIME] Status changed to 'in_progress', quiz continues")
+        logger.info(f"📡 [HALFTIME] Sending SSE notification to update frontend")
         return Response({
             'success': True,
             'current_round': session.current_round,
@@ -767,8 +771,12 @@ def next_question(request, session_id):
             # Verificar si es halftime
             next_round = session.rounds.filter(round_number=session.current_round).first()
             if next_round and next_round.is_halftime_before:
+                logger.info(f"🍻 [HALFTIME] Detected is_halftime_before=True for round {session.current_round}")
+                logger.info(f"🍻 [HALFTIME] Previous round completed: {session.current_round - 1}")
+                logger.info(f"🍻 [HALFTIME] Next round will be: {session.current_round}")
+                logger.info(f"🍻 [HALFTIME] Setting status to 'halftime' for break")
                 session.status = 'halftime'
-                logger.info(f"🍻 [NEXT] Entering halftime before Round {session.current_round}")
+                logger.info(f"✅ [HALFTIME] Status saved, SSE will notify frontend")
             
             if next_round:
                 next_round.started_at = timezone.now()

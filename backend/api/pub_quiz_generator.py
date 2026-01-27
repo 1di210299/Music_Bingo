@@ -196,7 +196,11 @@ Generate exactly {num_questions} questions now.
             # - 4 rondas: halftime antes de Round 3 (después de 2)
             # - 5 rondas: halftime antes de Round 3 (después de 2.5 → 3)
             # - 6 rondas: halftime antes de Round 4 (después de 3)
-            if include_halftime and i == (total_genres // 2) + 1:
+            halftime_position = (total_genres // 2) + 1
+            if include_halftime and i == halftime_position:
+                logger.info(f"🍻 [GENERATOR] Halftime calculation: total_rounds={total_genres}, halftime_position={halftime_position}")
+                logger.info(f"🍻 [GENERATOR] Setting is_halftime_before=True for round {i}")
+                logger.info(f"🍻 [GENERATOR] This means halftime will trigger after completing round {i-1}")
                 round_data["is_halftime_before"] = True
             
             rounds.append(round_data)

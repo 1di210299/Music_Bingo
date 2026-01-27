@@ -1524,11 +1524,22 @@
                 });
                 const data = await response.json();
 
+                console.log('[NEXT] 🔍 Response data:', {
+                    success: data.success,
+                    status: data.status,
+                    current_round: data.current_round,
+                    current_question: data.current_question
+                });
+
                 if (data.success) {
                     if (data.status === 'halftime') {
+                        console.log('[HALFTIME] 🍻 DETECTED! Round:', data.current_round, 'Question:', data.current_question);
+                        console.log('[HALFTIME] 🔔 Showing alert to user...');
                         alert('🍻 HALFTIME! Take a short break!');
+                        console.log('[HALFTIME] ✅ Alert shown, updating UI...');
                         document.getElementById('questionText').textContent = 'HALFTIME BREAK 🍻';
                         document.getElementById('currentGenre').textContent = 'BREAK';
+                        console.log('[HALFTIME] ✅ UI updated');
                     } else if (data.status === 'completed') {
                         alert('🎉 Quiz completed! Check the final leaderboard!');
                         document.getElementById('questionText').textContent = 'QUIZ COMPLETED! 🎉';
