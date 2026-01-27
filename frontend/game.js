@@ -694,6 +694,17 @@ async function initializeGame() {
 }
 
 /**
+ * Close setup modal without saving
+ */
+function closeSetupModal() {
+    const modal = document.getElementById('setupModal');
+    if (confirm('⚠️ Are you sure you want to close the setup? The game will not be initialized.')) {
+        modal.classList.add('hidden');
+        console.log('Setup modal closed by user');
+    }
+}
+
+/**
  * Load venue name from localStorage and update UI
  */
 function loadVenueNameFromStorage() {
