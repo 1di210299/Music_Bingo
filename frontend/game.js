@@ -1134,11 +1134,11 @@ async function playNextTrack() {
  */
 function generateWelcomeText() {
     const welcomeScripts = [
-        `Ladies and gentlemen, welcome to Music Bingo at ${gameState.venueName}! Tonight, we're dropping beats instead of balls. Grab your cards, your markers, and get ready to mark off those songs as we play short clips. No titles or artists will be announced—just listen closely, sing along if you know it, and shout 'Bingo!' when you get a line or full house. We've got great prizes up for grabs, so let's kick things off with some classic tunes!`,
+        `Ladies and gentlemen, welcome to Music Bingo at ${gameState.venueName}! Tonight, we're dropping beats instead of balls. Grab your cards, your markers, and get ready to mark off those songs as we play short clips. No titles or artists will be announced—just listen closely, sing along if you know it, and shout 'Bingo!' when you get a line, all 4 corners, or full house. We've got great prizes up for grabs, so let's kick things off with some classic tunes!`,
 
-        `Hello everyone and welcome to the ultimate Music Bingo night at ${gameState.venueName}! Get those dabbers ready because we're about to play hits from across the decades. I'll spin the tracks, you identify them on your card—without any hints on the name or who sings it. First to a full line wins! Are you ready to test your music knowledge? Let's get this party started!`,
+        `Hello everyone and welcome to the ultimate Music Bingo night at ${gameState.venueName}! Get those dabbers ready because we're about to play hits from across the decades. I'll spin the tracks, you identify them on your card—without any hints on the name or who sings it. First to a full line, all 4 corners, or full house wins! Are you ready to test your music knowledge? Let's get this party started!`,
 
-        `Good evening, music lovers! It's time for Music Bingo extravaganza at ${gameState.venueName}. Rules are simple: We play a snippet, you spot the song on your card and mark it off. No song titles or artists given—just pure ear power. Prizes for the quickest bingos, so stay sharp. Here comes the first track—good luck!`
+        `Good evening, music lovers! It's time for Music Bingo extravaganza at ${gameState.venueName}. Rules are simple: We play a snippet, you spot the song on your card and mark it off. No song titles or artists given—just pure ear power. Shout 'Bingo!' when you get a line, all 4 corners, or full house. Prizes for the quickest bingos, so stay sharp. Here comes the first track—good luck!`
     ];
 
     return welcomeScripts[Math.floor(Math.random() * welcomeScripts.length)];
@@ -1270,9 +1270,8 @@ function generateAnnouncementText(track) {
     if (gameState.announcementsAI && gameState.announcementsAI[track.id]) {
         const aiAnnouncements = gameState.announcementsAI[track.id];
 
-        // Randomly choose one of the 3 AI-generated types
-        const types = ['decade', 'trivia', 'simple'];
-        const randomType = types[Math.floor(Math.random() * types.length)];
+        // Always use trivia (interesting facts) - 100%
+        const randomType = 'trivia';
 
         console.log(`✓ Using AI announcement (${randomType}) for track ${track.id}`);
         return aiAnnouncements[randomType];
@@ -1471,7 +1470,7 @@ async function playSongPreview(track) {
                 console.log('▶ Preview playing with fade in/out');
 
                 // PHILIP'S FEEDBACK #9: Fade in at start
-                musicPlayer.fade(0, 0.9, 1500);  // Fade from 0 to 90% over 1.5 seconds
+                musicPlayer.fade(0, 0.6, 1500);  // Fade from 0 to 60% over 1.5 seconds (balanced with TTS)
 
                 // Calculate when to start fade out (3 seconds before end)
                 const fadeOutTime = CONFIG.PREVIEW_DURATION_MS - 3000;
@@ -1480,7 +1479,7 @@ async function playSongPreview(track) {
                 setTimeout(() => {
                     if (musicPlayer) {
                         // PHILIP'S FEEDBACK #9: Fade out at end
-                        musicPlayer.fade(0.9, 0, 3000);  // Fade from 90% to 0 over 3 seconds
+                        musicPlayer.fade(0.6, 0, 3000);  // Fade from 60% to 0 over 3 seconds
                     }
                 }, fadeOutTime);
 
