@@ -179,6 +179,7 @@ Generate exactly {num_questions} questions now.
             Diccionario con la estructura del quiz
         """
         rounds = []
+        total_genres = len(selected_genres)
         
         for i, genre in enumerate(selected_genres, 1):
             round_data = {
@@ -190,8 +191,12 @@ Generate exactly {num_questions} questions now.
                 "is_buzzer_round": False,
             }
             
-            # Halftime después de la mitad de rondas
-            if include_halftime and i == len(selected_genres) // 2:
+            # 🔧 FIX: Halftime después de la mitad REAL de rondas (redondeando hacia arriba)
+            # Ejemplos:
+            # - 4 rondas: halftime antes de Round 3 (después de 2)
+            # - 5 rondas: halftime antes de Round 3 (después de 2.5 → 3)
+            # - 6 rondas: halftime antes de Round 4 (después de 3)
+            if include_halftime and i == (total_genres // 2) + 1:
                 round_data["is_halftime_before"] = True
             
             rounds.append(round_data)

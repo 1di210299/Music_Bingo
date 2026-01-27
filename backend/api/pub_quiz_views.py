@@ -730,11 +730,26 @@ def next_question(request, session_id):
     if not session:
         return Response({"error": "Session not found"}, status=404)
     
+    logger.info(f"🔄 [NEXT] Current state - Round: {session.current_round}, Question: {session.current_question}, Status: {session.status}")
+    
+    # 🔧 FIX: Si estamos en halftime, el primer "Next" debe pasar a in_progress
+    if session.status == 'halftime':
+        session.status = 'in_progress'
+        session.save()
+        logger.info(f"▶️ [NEXT] Resuming from halftime to in_progress")
+        return Response({
+            'success': True,
+            'current_round': session.current_round,
+            'current_question': session.current_question,
+            'status': session.status
+        })
+    
     total_questions_in_round = session.questions_per_round
     
     if session.current_question < total_questions_in_round:
         session.current_question += 1
         session.question_started_at = None  # Will be set by frontend after TTS
+        logger.info(f"➡️ [NEXT] Moving to question {session.current_question}")
     else:
         # Siguiente ronda
         current_round = session.rounds.filter(round_number=session.current_round).first()
@@ -742,6 +757,7 @@ def next_question(request, session_id):
             current_round.is_completed = True
             current_round.completed_at = timezone.now()
             current_round.save()
+            logger.info(f"✅ [NEXT] Round {session.current_round} completed")
         
         if session.current_round < session.total_rounds:
             session.current_round += 1
@@ -752,12 +768,15 @@ def next_question(request, session_id):
             next_round = session.rounds.filter(round_number=session.current_round).first()
             if next_round and next_round.is_halftime_before:
                 session.status = 'halftime'
+                logger.info(f"🍻 [NEXT] Entering halftime before Round {session.current_round}")
             
             if next_round:
                 next_round.started_at = timezone.now()
                 next_round.save()
+                logger.info(f"▶️ [NEXT] Starting Round {session.current_round}")
         else:
             session.status = 'completed'
+            logger.info(f"🎉 [NEXT] Quiz completed!")
     
     session.save()
     
