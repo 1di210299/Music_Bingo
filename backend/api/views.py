@@ -1137,7 +1137,8 @@ def create_jingle_schedule(request):
         venue_name = data.get('venue_name', '').strip() or None
         
         # Get optional session_id and resolve to BingoSession instance
-        session_id = data.get('session_id', '').strip() or None
+        session_id_raw = data.get('session_id')
+        session_id = session_id_raw.strip() if session_id_raw else None
         session_instance = None
         if session_id:
             try:
