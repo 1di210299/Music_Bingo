@@ -311,6 +311,146 @@
                 flex-wrap: wrap;
             }
         }
+
+        /* Custom Modal System */
+        .custom-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .custom-modal {
+            background: linear-gradient(135deg, rgba(15, 20, 30, 0.98), rgba(25, 30, 40, 0.98));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .custom-modal-overlay.show .custom-modal {
+            transform: scale(1);
+        }
+
+        .custom-modal-icon {
+            font-size: 3.5em;
+            text-align: center;
+            margin-bottom: 16px;
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .custom-modal-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            color: white;
+        }
+
+        .custom-modal-message {
+            font-size: 1em;
+            text-align: center;
+            opacity: 0.9;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            white-space: pre-line;
+        }
+
+        .custom-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .custom-modal-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .custom-modal-btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .custom-modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(79, 172, 254, 0.5);
+        }
+
+        .custom-modal-btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid var(--border);
+        }
+
+        .custom-modal-btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .custom-modal-btn-danger {
+            background: linear-gradient(135deg, #ff4757, #e84118);
+            color: white;
+            box-shadow: 0 4px 20px rgba(255, 71, 87, 0.3);
+        }
+
+        .custom-modal-btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(255, 71, 87, 0.5);
+        }
+
+        /* Modal types */
+        .custom-modal.success .custom-modal-icon {
+            color: #00f2fe;
+        }
+
+        .custom-modal.error .custom-modal-icon {
+            color: #ff4b2b;
+        }
+
+        .custom-modal.warning .custom-modal-icon {
+            color: #ffc107;
+        }
+
+        .custom-modal.info .custom-modal-icon {
+            color: #4facfe;
+        }
     </style>
     <script src="/config.js"></script>
 </head>
@@ -609,53 +749,162 @@
         async function deleteSession(sessionId, venueName) {
             console.log(`🗑️ [DELETE] Attempting to delete session ${sessionId} (${venueName})`);
             
-            if (!confirm(`Are you sure you want to delete the quiz session "${venueName}"?\n\nThis will permanently delete:\n• All registered teams\n• All questions and answers\n• All session data\n\nThis action cannot be undone!`)) {
-                console.log('❌ [DELETE] User cancelled deletion');
-                return;
+            // Show confirmation modal
+            showConfirmModal(
+                'Delete Quiz Session?',
+                `Are you sure you want to delete "${venueName}"?\n\nThis will permanently delete:\n• All registered teams\n• All questions and answers\n• All session data\n\nThis action cannot be undone!`,
+                'Delete',
+                async () => {
+                    // Disable delete button to prevent double-clicks
+                    const deleteBtn = event.target;
+                    const originalText = deleteBtn.textContent;
+                    deleteBtn.disabled = true;
+                    deleteBtn.textContent = 'Deleting...';
+                    deleteBtn.style.opacity = '0.5';
+
+                    try {
+                        console.log(`📤 [DELETE] Sending DELETE request for session ${sessionId}...`);
+                        const response = await fetch(`${BASE_URL}/api/pub-quiz/${sessionId}/delete`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        const data = await response.json();
+                        console.log(`📥 [DELETE] Response:`, response.status, data);
+
+                        if (response.ok && data.success) {
+                            console.log(`✅ [DELETE] Session deleted successfully`);
+                            showModal('success', 'Session Deleted!', `Session "${venueName}" deleted successfully!`, 'OK', () => {
+                                loadSessions(); // Reload sessions list
+                            });
+                        } else if (response.status === 404) {
+                            console.warn(`⚠️ [DELETE] Session already deleted`);
+                            showModal('warning', 'Already Deleted', 'This session has already been deleted.', 'OK', () => {
+                                loadSessions(); // Refresh list
+                            });
+                        } else {
+                            console.error(`❌ [DELETE] Failed:`, data.error || data.detail);
+                            showModal('error', 'Delete Failed', 'Error deleting session: ' + (data.error || data.detail || 'Unknown error'));
+                            // Re-enable button on error
+                            deleteBtn.disabled = false;
+                            deleteBtn.textContent = originalText;
+                            deleteBtn.style.opacity = '1';
+                        }
+                    } catch (error) {
+                        console.error('❌ [DELETE] Exception:', error);
+                        showModal('error', 'Delete Failed', 'Failed to delete session: ' + error.message);
+                        // Re-enable button on error
+                        deleteBtn.disabled = false;
+                        deleteBtn.textContent = originalText;
+                        deleteBtn.style.opacity = '1';
+                    }
+                },
+                'Cancel'
+            );
+        }
+
+        // 🎨 CUSTOM MODAL SYSTEM
+        function showModal(type = 'info', title = '', message = '', confirmText = 'OK', onConfirm = null) {
+            // Remove existing modal if any
+            const existingModal = document.getElementById('customModalOverlay');
+            if (existingModal) existingModal.remove();
+
+            // Icon mapping
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            // Create modal
+            const modalHTML = `
+                <div class="custom-modal-overlay" id="customModalOverlay">
+                    <div class="custom-modal ${type}">
+                        <div class="custom-modal-icon">${icons[type] || icons.info}</div>
+                        <div class="custom-modal-title">${title}</div>
+                        <div class="custom-modal-message">${message}</div>
+                        <div class="custom-modal-buttons">
+                            <button class="custom-modal-btn custom-modal-btn-primary" onclick="closeModal('customModalOverlay', ${onConfirm ? 'true' : 'false'})">${confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Store callback
+            if (onConfirm) {
+                window.customModalCallback = onConfirm;
             }
 
-            // Disable delete button to prevent double-clicks
-            const deleteBtn = event.target;
-            const originalText = deleteBtn.textContent;
-            deleteBtn.disabled = true;
-            deleteBtn.textContent = 'Deleting...';
-            deleteBtn.style.opacity = '0.5';
+            // Animate in
+            setTimeout(() => {
+                document.getElementById('customModalOverlay').classList.add('show');
+            }, 10);
+        }
 
-            try {
-                console.log(`📤 [DELETE] Sending DELETE request for session ${sessionId}...`);
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/${sessionId}/delete`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+        function showConfirmModal(title = '', message = '', confirmText = 'Confirm', onConfirm = null, cancelText = 'Cancel') {
+            // Remove existing modal if any
+            const existingModal = document.getElementById('customModalOverlay');
+            if (existingModal) existingModal.remove();
 
-                const data = await response.json();
-                console.log(`📥 [DELETE] Response:`, response.status, data);
+            // Create confirmation modal
+            const modalHTML = `
+                <div class="custom-modal-overlay" id="customModalOverlay">
+                    <div class="custom-modal warning">
+                        <div class="custom-modal-icon">⚠️</div>
+                        <div class="custom-modal-title">${title}</div>
+                        <div class="custom-modal-message">${message}</div>
+                        <div class="custom-modal-buttons">
+                            <button class="custom-modal-btn custom-modal-btn-secondary" onclick="closeConfirmModal(false)">${cancelText}</button>
+                            <button class="custom-modal-btn custom-modal-btn-danger" onclick="closeConfirmModal(true)">${confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
 
-                if (response.ok && data.success) {
-                    console.log(`✅ [DELETE] Session deleted successfully`);
-                    alert(`Session "${venueName}" deleted successfully!`);
-                    // Reload sessions list
-                    loadSessions();
-                } else if (response.status === 404) {
-                    console.warn(`⚠️ [DELETE] Session already deleted`);
-                    alert('This session has already been deleted.');
-                    loadSessions(); // Refresh list
-                } else {
-                    console.error(`❌ [DELETE] Failed:`, data.error || data.detail);
-                    alert('Error deleting session: ' + (data.error || data.detail || 'Unknown error'));
-                    // Re-enable button on error
-                    deleteBtn.disabled = false;
-                    deleteBtn.textContent = originalText;
-                    deleteBtn.style.opacity = '1';
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            // Store callback
+            if (onConfirm) {
+                window.customConfirmCallback = onConfirm;
+            }
+
+            // Animate in
+            setTimeout(() => {
+                document.getElementById('customModalOverlay').classList.add('show');
+            }, 10);
+        }
+
+        function closeModal(modalId, executeCallback = false) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.remove();
+                if (executeCallback && window.customModalCallback) {
+                    window.customModalCallback();
+                    window.customModalCallback = null;
                 }
-            } catch (error) {
-                console.error('❌ [DELETE] Exception:', error);
-                alert('Failed to delete session: ' + error.message);
-                // Re-enable button on error
-                deleteBtn.disabled = false;
-                deleteBtn.textContent = originalText;
-                deleteBtn.style.opacity = '1';
-            }
+            }, 300);
+        }
+
+        function closeConfirmModal(confirmed = false) {
+            const modal = document.getElementById('customModalOverlay');
+            if (!modal) return;
+
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.remove();
+                if (confirmed && window.customConfirmCallback) {
+                    window.customConfirmCallback();
+                    window.customConfirmCallback = null;
+                } else {
+                    window.customConfirmCallback = null;
+                }
+            }, 300);
         }
     </script>
 </body>
