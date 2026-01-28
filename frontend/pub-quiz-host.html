@@ -756,6 +756,14 @@
                             Update
                         </button>
                     </div>
+                    
+                    <!-- Halftime Settings -->
+                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                        <label style="font-size: 0.9em;">🍻 Halftime:</label>
+                        <input type="number" id="halftimeSeconds" value="90" min="30" max="300" 
+                               style="width: 60px; padding: 5px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white; text-align: center;">
+                        <span style="font-size: 0.9em; opacity: 0.7;">seconds</span>
+                    </div>
                 </div>
             </div>
             </div>
@@ -1858,17 +1866,28 @@
             const prevQ = allQuestions[currentQuestionIndex - 1];
             if (prevQ && nextQ && prevQ.round !== nextQ.round && nextQ.round === 2) {
                 console.log('[HALFTIME] 🍻 DETECTED! Moving from round', prevQ.round, 'to', nextQ.round);
-                const halftimeMessage = `That's the end of the first round! Let's take a short break. Grab a drink, chat with your team. We'll be back in a moment for the next round!`;
+                
+                // Get halftime duration from settings
+                const halftimeSeconds = parseInt(document.getElementById('halftimeSeconds')?.value) || 90;
+                
+                // Update UI immediately
+                document.getElementById('questionText').textContent = 'HALFTIME BREAK 🍻';
+                document.getElementById('currentGenre').textContent = 'BREAK - Relax & Refresh!';
+                
+                // Play TTS announcement
+                const halftimeMessage = `That's the end of the first round! Let's take a ${halftimeSeconds} second break. Grab a drink, chat with your team. We'll be back in a moment for the next round!`;
                 playTTS(halftimeMessage, 'daniel').then(() => {
-                    console.log('[HALFTIME] ✅ Announcement complete');
-                    showModal('info', '🍻 HALFTIME BREAK!', 'Take a 1-2 minute break!\n\nGrab drinks, discuss answers with your team.\n\nClick "Ready!" when you want to continue to the next round.', 'Ready! 🎉', () => {
-                        // After halftime, show next question
+                    console.log('[HALFTIME] ✅ Announcement complete, starting countdown...');
+                    
+                    // Start halftime countdown
+                    startHalftimeCountdown(halftimeSeconds, () => {
+                        // After halftime countdown finishes, show next question
+                        console.log('[HALFTIME] ⏰ Countdown finished, resuming quiz...');
                         showQuestion(nextQ);
                         playQuestionTTS(nextQ);
                     });
                 });
-                document.getElementById('questionText').textContent = 'HALFTIME BREAK 🍻';
-                document.getElementById('currentGenre').textContent = 'BREAK - Relax & Refresh!';
+                
                 return;
             }
             
@@ -2321,6 +2340,59 @@
                 event.target.innerHTML = '<span>🖨️ Print Answer Sheets</span>';
                 event.target.disabled = false;
             }
+        }
+
+        // 🎨 HALFTIME COUNTDOWN SYSTEM
+        let halftimeInterval = null;
+        
+        function startHalftimeCountdown(seconds, onComplete) {
+            // Stop any existing halftime countdown
+            if (halftimeInterval) {
+                clearInterval(halftimeInterval);
+                halftimeInterval = null;
+            }
+            
+            console.log(`[HALFTIME] ⏰ Starting ${seconds} second countdown`);
+            
+            let remainingSeconds = seconds;
+            
+            // Update countdown display
+            const updateDisplay = () => {
+                const minutes = Math.floor(remainingSeconds / 60);
+                const secs = remainingSeconds % 60;
+                const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                
+                // Update question text with countdown
+                document.getElementById('questionText').textContent = `🍻 HALFTIME BREAK - ${timeStr}`;
+                
+                // Update countdown circle if visible
+                const countdownEl = document.getElementById('countdown');
+                if (countdownEl) {
+                    countdownEl.textContent = remainingSeconds;
+                    countdownEl.style.color = remainingSeconds <= 10 ? '#ef4444' : 'var(--accent)';
+                }
+            };
+            
+            // Initial display
+            updateDisplay();
+            
+            // Start countdown
+            halftimeInterval = setInterval(() => {
+                remainingSeconds--;
+                
+                if (remainingSeconds <= 0) {
+                    // Countdown finished
+                    clearInterval(halftimeInterval);
+                    halftimeInterval = null;
+                    console.log('[HALFTIME] ✅ Countdown complete!');
+                    
+                    if (onComplete) {
+                        onComplete();
+                    }
+                } else {
+                    updateDisplay();
+                }
+            }, 1000);
         }
 
         // 🎨 CUSTOM MODAL SYSTEM
