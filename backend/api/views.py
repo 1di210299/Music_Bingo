@@ -1611,6 +1611,14 @@ def bingo_sessions(request):
             # Generate unique session ID
             session_id = str(uuid.uuid4())
             
+            # Log incoming logo data
+            logo_url = data.get('logo_url', '')
+            logger.info(f"Creating bingo session for '{data.get('venue_name', '')}'")
+            logger.info(f"  logo_url received: {logo_url[:100] if logo_url else 'None'}...")
+            logger.info(f"  logo_url type: {type(logo_url)}, length: {len(logo_url) if logo_url else 0}")
+            if logo_url:
+                logger.info(f"  logo_url starts with: {logo_url[:50]}")
+            
             # Create session
             session = BingoSession.objects.create(
                 session_id=session_id,
@@ -1619,14 +1627,15 @@ def bingo_sessions(request):
                 num_players=data.get('num_players', 25),
                 voice_id=data.get('voice_id', 'JBFqnCBsd6RMkjVDRZzb'),
                 decades=data.get('decades', ['1960s', '1970s', '1980s', '1990s']),
-                logo_url=data.get('logo_url', ''),
+                logo_url=logo_url,
                 social_media=data.get('social_media', ''),
                 include_qr=data.get('include_qr', False),
                 prizes=data.get('prizes', {}),
                 status='pending'
             )
             
-            logger.info(f"Created bingo session: {session_id} for {session.venue_name}")
+            logger.info(f"✅ Created bingo session: {session_id} for {session.venue_name}")
+            logger.info(f"   Saved logo_url length: {len(session.logo_url) if session.logo_url else 0}")
             
             return Response({
                 'success': True,
@@ -1685,6 +1694,12 @@ def bingo_session_detail(request, session_id):
         return Response({'error': 'Session not found'}, status=404)
     
     if request.method == 'GET':
+        logger.info(f"📖 Fetching bingo session {session_id}")
+        logger.info(f"   venue_name: {session.venue_name}")
+        logger.info(f"   logo_url length: {len(session.logo_url) if session.logo_url else 0}")
+        if session.logo_url:
+            logger.info(f"   logo_url starts with: {session.logo_url[:50]}")
+        
         return Response({
             'session_id': session.session_id,
             'venue_name': session.venue_name,

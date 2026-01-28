@@ -858,6 +858,10 @@
             // Default: ingress routing
             return '';
         })();
+        
+        // SSE connection for real-time updates
+        let hostEventSource = null;
+        
         // LOCAL QUESTION MANAGEMENT - No SSE needed for host
         let allQuestions = []; // All questions loaded at start
         let currentQuestionIndex = 0; // Current position in questions array
