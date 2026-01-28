@@ -1464,22 +1464,38 @@
                 return;
             }
 
-            // LOCAL start - no backend call needed
             document.getElementById('btnStart').disabled = true;
             document.getElementById('btnShowAnswer').disabled = false;
             document.getElementById('btnNext').disabled = false;
             
             console.log('[START] 🎬 Starting quiz with', allQuestions.length, 'questions');
             
-            // Play welcome message
-            isPlayingWelcomeMessage = true;
-            const welcomeMessage = `Welcome to ${sessionData.venue_name}'s Pub Quiz! We have ${sessionData.total_teams || 0} teams competing today. Good luck everyone!`;
-            
             try {
+                // Llamar al backend para iniciar el quiz y notificar a los jugadores
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to start quiz on backend');
+                }
+                
+                const data = await response.json();
+                console.log('[START] ✅ Backend notified, quiz started for players');
+                
+                // Play welcome message locally on host
+                isPlayingWelcomeMessage = true;
+                const welcomeMessage = data.welcome_message || `Welcome to ${sessionData.venue_name}'s Pub Quiz! We have ${sessionData.total_teams || 0} teams competing today. Good luck everyone!`;
+                
                 await playTTS(welcomeMessage, 'daniel');
                 console.log('[TTS] ✅ Welcome message completed');
+                
             } catch (err) {
-                console.error('[TTS] ❌ Error in welcome message:', err);
+                console.error('[START] ❌ Error starting quiz:', err);
+                showModal('error', 'Start Failed', 'Failed to start quiz. Please try again.');
+                document.getElementById('btnStart').disabled = false;
+                return;
             } finally {
                 isPlayingWelcomeMessage = false;
                 // Play first question

@@ -606,14 +606,14 @@ def quiz_host_data(request, session_id):
 
 @api_view(['POST'])
 def start_quiz(request, session_id):
-    """Inicia el quiz"""
+    """Inicia el quiz y envía todas las preguntas a los jugadores"""
     session = get_session_by_code_or_id(session_id)
     if not session:
         return Response({"error": "Session not found"}, status=404)
+    
     session.status = 'in_progress'
     session.current_round = 1
     session.current_question = 1
-    # Don't set question_started_at yet - will be set after welcome TTS completes
     session.save()
     
     # Marcar primera ronda como iniciada
@@ -621,6 +621,31 @@ def start_quiz(request, session_id):
     if first_round:
         first_round.started_at = timezone.now()
         first_round.save()
+    
+    # Obtener TODAS las preguntas del quiz
+    all_questions = QuizQuestion.objects.filter(session=session).order_by('round_number', 'question_number')
+    
+    questions_data = []
+    for q in all_questions:
+        questions_data.append({
+            'id': q.id,
+            'text': q.question_text,
+            'round': q.round_number,
+            'number': q.question_number,
+            'genre': q.genre.name if q.genre else 'General',
+            'difficulty': q.difficulty,
+            'points': q.get_points_value(),
+            'type': q.question_type,
+            'options': q.options if q.question_type == 'multiple_choice' else None,
+            'correct_option': q.correct_option if q.question_type == 'multiple_choice' else None
+        })
+    
+    # Configuración de timing
+    timing_config = {
+        'seconds_per_question': 15,  # 15 segundos por pregunta
+        'halftime_duration': 90,  # 90 segundos de halftime
+        'halftime_after_round': 1  # Halftime después del round 1
+    }
     
     # Mensaje de bienvenida
     team_count = session.teams.count()
@@ -631,10 +656,16 @@ def start_quiz(request, session_id):
         f"Good luck everyone!"
     )
     
+    logger.info(f"🎬 [START_QUIZ] Quiz started for session {session_id}, sending {len(questions_data)} questions to players")
+    
     return Response({
         'success': True, 
         'status': 'in_progress',
-        'welcome_message': welcome_message
+        'welcome_message': welcome_message,
+        'all_questions': questions_data,
+        'timing': timing_config,
+        'total_rounds': session.total_rounds,
+        'questions_per_round': session.questions_per_round
     })
 
 
@@ -811,6 +842,8 @@ def next_question(request, session_id):
         # Keep question_started_at as None - frontend will set it after TTS via start-countdown
         # DO NOT reset to timezone.now() here as it would start countdown before TTS finishes
         session.question_started_at = None
+        # Ensure status is in_progress when showing a new question
+        session.status = 'in_progress'
         logger.info(f"➡️ [NEXT] Moving to question {session.current_question}, question_started_at reset to None (will be set after TTS)")
     else:
         # Siguiente ronda
@@ -912,7 +945,7 @@ def set_auto_advance_time(request, session_id):
 def quiz_stream(request, session_id):
     """
     Server-Sent Events endpoint for real-time quiz updates
-    Replaces polling with efficient push-based updates
+    NEW: Sends ALL questions at once when quiz starts
     """
     def event_generator():
         """Generator that yields SSE-formatted messages"""
@@ -920,9 +953,9 @@ def quiz_stream(request, session_id):
         if not session:
             yield f"data: {{\"type\": \"error\", \"message\": \"Session not found\"}}\n\n"
             return
-        last_round = session.current_round
-        last_question = session.current_question
+        
         last_status = session.status
+        quiz_started_sent = False  # Track if we've sent the quiz_started message
         
         # Keepalive tracking - send data keepalive every 30s to prevent timeout
         last_keepalive = timezone.now()
@@ -930,8 +963,7 @@ def quiz_stream(request, session_id):
         # Send initial connection message
         yield f"data: {json.dumps({'type': 'connected', 'session_id': session_id})}\n\n"
         
-        # Send initial state immediately after connection
-        initial_state_sent = False
+        logger.info(f"📡 [SSE] Player connected to session {session_id}")
         
         while True:
             try:
@@ -941,79 +973,62 @@ def quiz_stream(request, session_id):
                 # Check if session ended
                 if session.status == 'completed':
                     yield f"data: {json.dumps({'type': 'ended', 'message': 'Quiz completed'})}\n\n"
+                    logger.info(f"🏁 [SSE] Quiz completed for session {session_id}")
                     break
                 
-                # Detect changes
+                # Detect status change
                 status_changed = session.status != last_status
-                question_changed = (session.current_round != last_round or 
-                                  session.current_question != last_question)
                 
-                # Send update on first iteration or when changes detected
-                if not initial_state_sent or status_changed or question_changed:
-                    # Status changed or new question
-                    if session.status in ['in_progress', 'halftime', 'revealing_answer']:
-                        question = QuizQuestion.objects.filter(
-                            session=session,
-                            round_number=session.current_round,
-                            question_number=session.current_question
-                        ).first()
-                        
-                        if question:
-                            # Get team answers for this question
-                            answers = []
-                            team_answers = TeamAnswer.objects.filter(question=question).select_related('team').order_by('buzz_order', 'submitted_at')
-                            
-                            for ans in team_answers:
-                                answers.append({
-                                    'team_id': ans.team.id,
-                                    'team_name': ans.team.team_name,
-                                    'answer_text': ans.answer_text,
-                                    'is_correct': ans.is_correct,
-                                    'buzz_order': ans.buzz_order,
-                                    'buzz_time': ans.buzz_timestamp.isoformat() if ans.buzz_timestamp else None,
-                                    'points': ans.points_awarded
-                                })
-                            
-                            data = {
-                                'type': 'question_update',
-                                'question': {
-                                    'id': question.id,
-                                    'text': question.question_text,
-                                    'answer': question.correct_answer if session.status == 'revealing_answer' else None,
-                                    'fun_fact': question.fun_fact if session.status == 'revealing_answer' else None,
-                                    'round': question.round_number,
-                                    'number': question.question_number,
-                                    'points': question.get_points_value(),
-                                    'difficulty': question.difficulty,
-                                    'type': question.question_type,
-                                    'genre': question.genre.name if question.genre else 'General',
-                                    'hints': question.hints,
-                                    'options': question.options if question.question_type == 'multiple_choice' else None,
-                                    'is_last': (question.question_number == session.questions_per_round)
-                                },
-                                'session_status': session.status,
-                                'answers': answers,
-                                'team_count': session.teams.count(),
-                                'answers_count': len(answers)
-                            }
-                            
-                            yield f"data: {json.dumps(data)}\n\n"
-                            
-                            # Update tracking variables
-                            last_round = session.current_round
-                            last_question = session.current_question
-                            last_status = session.status
-                            initial_state_sent = True
-                        else:
-                            # No hay pregunta disponible - enviar estado de espera
-                            yield f"data: {json.dumps({{'type': 'waiting', 'message': 'Waiting for questions to be generated', 'status': session.status}})}\n\n"
-                            last_status = session.status
-                            initial_state_sent = True
+                # NEW: When quiz starts (status changes to in_progress), send ALL questions
+                if status_changed and session.status == 'in_progress' and not quiz_started_sent:
+                    logger.info(f"🎬 [SSE] Quiz started! Sending all questions to players...")
+                    
+                    # Get ALL questions
+                    all_questions = QuizQuestion.objects.filter(session=session).order_by('round_number', 'question_number')
+                    
+                    questions_data = []
+                    for q in all_questions:
+                        questions_data.append({
+                            'id': q.id,
+                            'text': q.question_text,
+                            'round': q.round_number,
+                            'number': q.question_number,
+                            'genre': q.genre.name if q.genre else 'General',
+                            'difficulty': q.difficulty,
+                            'points': q.get_points_value(),
+                            'type': q.question_type,
+                            'options': q.options if q.question_type == 'multiple_choice' else None
+                        })
+                    
+                    # Timing configuration
+                    timing_config = {
+                        'seconds_per_question': 15,
+                        'halftime_duration': 90,
+                        'halftime_after_round': 1
+                    }
+                    
+                    data = {
+                        'type': 'quiz_started',
+                        'all_questions': questions_data,
+                        'timing': timing_config,
+                        'total_rounds': session.total_rounds,
+                        'questions_per_round': session.questions_per_round
+                    }
+                    
+                    yield f"data: {json.dumps(data)}\n\n"
+                    logger.info(f"✅ [SSE] Sent {len(questions_data)} questions to players")
+                    
+                    quiz_started_sent = True
+                    last_status = session.status
+                
+                # Handle other status changes
+                elif status_changed:
+                    if session.status == 'ready' or session.status == 'registration':
+                        yield f"data: {json.dumps({'type': 'waiting', 'message': 'Waiting for quiz to start', 'status': session.status})}\n\n"
                     else:
-                        # Status changed but quiz not active
                         yield f"data: {json.dumps({'type': 'status_change', 'status': session.status})}\n\n"
-                        last_status = session.status
-                        initial_state_sent = True
+                    
+                    last_status = session.status
                 
                 # Check if data keepalive is needed (every 30 seconds)
                 current_time = timezone.now()
@@ -1290,6 +1305,82 @@ def record_buzz(request, question_id):
                 'order': ans.buzz_order,
                 'message': 'Already buzzed'
             })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def submit_all_answers(request, session_id):
+    """
+    NEW: Receive all answers from a team at the end of the quiz
+    """
+    try:
+        session = get_session_by_code_or_id(session_id)
+        if not session:
+            return Response({'error': 'Session not found'}, status=404)
+        
+        team_id = request.data.get('team_id')
+        answers = request.data.get('answers', [])
+        
+        if not team_id:
+            return Response({'error': 'team_id required'}, status=400)
+        
+        team = get_object_or_404(QuizTeam, id=team_id)
+        
+        logger.info(f"📥 [SUBMIT_ALL] Receiving {len(answers)} answers from team {team.team_name}")
+        
+        saved_count = 0
+        for ans_data in answers:
+            question_id = ans_data.get('question_id')
+            answer_text = ans_data.get('answer', '')
+            is_multiple_choice = ans_data.get('is_multiple_choice', False)
+            
+            try:
+                question = QuizQuestion.objects.get(id=question_id, session=session)
+                
+                # Check if correct
+                is_correct = False
+                if is_multiple_choice and question.question_type == 'multiple_choice':
+                    is_correct = (answer_text.upper() == question.correct_option.upper())
+                else:
+                    # For written answers, compare against correct answer and alternatives
+                    answer_lower = answer_text.lower().strip()
+                    correct_lower = question.correct_answer.lower().strip()
+                    is_correct = (answer_lower == correct_lower)
+                    
+                    # Check alternatives
+                    if not is_correct and question.alternative_answers:
+                        for alt in question.alternative_answers:
+                            if answer_lower == alt.lower().strip():
+                                is_correct = True
+                                break
+                
+                # Save or update answer
+                team_answer, created = TeamAnswer.objects.update_or_create(
+                    team=team,
+                    question=question,
+                    defaults={
+                        'answer_text': answer_text,
+                        'is_correct': is_correct,
+                        'submitted_at': timezone.now()
+                    }
+                )
+                saved_count += 1
+                
+            except QuizQuestion.DoesNotExist:
+                logger.warning(f"⚠️ [SUBMIT_ALL] Question {question_id} not found")
+                continue
+        
+        logger.info(f"✅ [SUBMIT_ALL] Saved {saved_count}/{len(answers)} answers for team {team.team_name}")
+        
+        return Response({
+            'success': True,
+            'message': f'Submitted {saved_count} answers',
+            'saved_count': saved_count
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ [SUBMIT_ALL] Error: {e}", exc_info=True)
+        return Response({'error': str(e)}, status=500)
 
 
 # ============================================================================

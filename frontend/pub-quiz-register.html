@@ -662,6 +662,13 @@
         let eventSource = null; // SSE connection
         let statusPollInterval = null; // Only for waiting status (checking if quiz started)
         let selectedOption = null; // For multiple choice questions
+        
+        // New: Quiz data and timing
+        let allQuizQuestions = []; // All questions received at start
+        let currentQuestionIndex = 0;
+        let questionTimer = null;
+        let teamAnswers = []; // Store all answers locally
+        let isInHalftime = false;
 
         async function init() {
             console.time('init-total');
@@ -929,21 +936,24 @@
                         case 'connected':
                             console.log(`Connected to session ${data.session_id}`);
                             break;
+                        
                         case 'waiting':
                             // Waiting for questions to be generated
                             console.log(`⏳ ${data.message}`);
                             showScreen('waitingScreen');
                             break;
 
-                        case 'question_update':
-                            // New question or question update
-                            const question = data.question;
-                            currentQuestionId = question.id;
+                        case 'quiz_started':
+                            // NEW: Quiz started! Receive ALL questions at once
+                            console.log('🎬 Quiz started! Receiving all questions...');
+                            allQuizQuestions = data.all_questions || [];
+                            const timing = data.timing || {};
                             
-                            // Check if this team already answered
-                            const teamAnswer = data.answers ? data.answers.find(a => a.team_id === teamId) : null;
+                            console.log(`📚 Received ${allQuizQuestions.length} questions`);
+                            console.log(`⏱️ Timing: ${timing.seconds_per_question}s per question, halftime after round ${timing.halftime_after_round}`);
                             
-                            updateUI(data.session_status, question, teamAnswer);
+                            // Start local quiz flow
+                            startLocalQuizFlow(timing);
                             break;
 
                         case 'status_change':
@@ -958,6 +968,7 @@
                             // Quiz completed
                             showScreen('waitingScreen');
                             alert('Quiz completed! Thank you for playing!');
+                            stopQuestionTimer();
                             eventSource.close();
                             eventSource = null;
                             break;
@@ -984,6 +995,177 @@
                     }
                 }, 5000);
             };
+        }
+
+        /**
+         * Start local quiz flow with automatic timing
+         */
+        function startLocalQuizFlow(timing) {
+            currentQuestionIndex = 0;
+            teamAnswers = [];
+            
+            console.log('🎬 Starting local quiz flow...');
+            showNextQuestion(timing);
+        }
+
+        /**
+         * Show next question with automatic timer
+         */
+        function showNextQuestion(timing) {
+            if (currentQuestionIndex >= allQuizQuestions.length) {
+                console.log('🎉 All questions completed!');
+                submitAllAnswers();
+                return;
+            }
+
+            const question = allQuizQuestions[currentQuestionIndex];
+            const prevQuestion = currentQuestionIndex > 0 ? allQuizQuestions[currentQuestionIndex - 1] : null;
+            
+            // Check for halftime
+            if (prevQuestion && prevQuestion.round !== question.round && 
+                question.round === (timing.halftime_after_round || 1) + 1) {
+                console.log('🍻 HALFTIME!');
+                showHalftime(timing.halftime_duration || 90, () => {
+                    displayQuestion(question, timing);
+                });
+                return;
+            }
+            
+            displayQuestion(question, timing);
+        }
+
+        /**
+         * Display a question and start timer
+         */
+        function displayQuestion(question, timing) {
+            console.log(`📝 Showing Q${question.number} of Round ${question.round}`);
+            currentQuestionId = question.id;
+            
+            // Update UI
+            document.getElementById('roundTitle').textContent = `Round ${question.round}`;
+            const questionInfo = document.getElementById('questionInfo');
+            
+            let difficultyColor = '#fbbf24';
+            if (question.difficulty === 'easy') difficultyColor = '#4ade80';
+            if (question.difficulty === 'hard') difficultyColor = '#f87171';
+            
+            questionInfo.innerHTML = `Question ${question.number} <span style="background: ${difficultyColor}; color: #000; padding: 3px 10px; border-radius: 50px; font-weight: 800; font-size: 0.85em; text-transform: uppercase; margin-left: 6px;">${question.difficulty} - ${question.points}pts</span>`;
+            
+            // Show question
+            showScreen('questionScreen');
+            document.getElementById('currentQuestionText').textContent = question.text;
+            
+            // Handle question type
+            const typeLabel = document.getElementById('questionTypeLabel');
+            if (question.type === 'multiple_choice' && question.options) {
+                typeLabel.textContent = '📝 Multiple Choice - Select the correct answer';
+                document.getElementById('multipleChoiceContainer').style.display = 'block';
+                document.getElementById('answerFormContainer').style.display = 'none';
+                
+                // Populate options
+                ['A', 'B', 'C', 'D'].forEach(letter => {
+                    const optionText = document.getElementById('option' + letter);
+                    if (optionText && question.options[letter]) {
+                        optionText.textContent = question.options[letter];
+                    }
+                });
+                
+                // Reset selection
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                    btn.disabled = false;
+                });
+                selectedOption = null;
+            } else {
+                typeLabel.textContent = '✍️ Written Answer - Type your answer';
+                document.getElementById('multipleChoiceContainer').style.display = 'none';
+                document.getElementById('answerFormContainer').style.display = 'block';
+                document.getElementById('answerInput').value = '';
+                document.getElementById('answerInput').disabled = false;
+                document.getElementById('submitAnswerBtn').disabled = false;
+            }
+            
+            // Start question timer
+            startQuestionTimer(timing.seconds_per_question || 15, () => {
+                // Time's up! Auto-advance to next question
+                currentQuestionIndex++;
+                showNextQuestion(timing);
+            });
+        }
+
+        /**
+         * Start question countdown timer
+         */
+        function startQuestionTimer(seconds, onComplete) {
+            stopQuestionTimer(); // Clear any existing timer
+            
+            let remaining = seconds;
+            console.log(`⏱️ Starting ${seconds}s timer`);
+            
+            questionTimer = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    stopQuestionTimer();
+                    console.log('⏰ Time\'s up!');
+                    onComplete();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Stop question timer
+         */
+        function stopQuestionTimer() {
+            if (questionTimer) {
+                clearInterval(questionTimer);
+                questionTimer = null;
+            }
+        }
+
+        /**
+         * Show halftime screen
+         */
+        function showHalftime(duration, onComplete) {
+            console.log(`🍻 Halftime for ${duration} seconds`);
+            showScreen('waitingScreen');
+            document.querySelector('#waitingScreen h2').textContent = '🍻 HALFTIME BREAK';
+            document.querySelector('#waitingScreen p').textContent = `Take a ${duration} second break! Next round coming up...`;
+            
+            setTimeout(() => {
+                console.log('✅ Halftime over, continuing...');
+                document.querySelector('#waitingScreen h2').textContent = '⏳ Waiting for Quiz to Start';
+                document.querySelector('#waitingScreen p').textContent = 'Please wait while the host starts the quiz...';
+                onComplete();
+            }, duration * 1000);
+        }
+
+        /**
+         * Submit all answers at the end
+         */
+        async function submitAllAnswers() {
+            console.log('📤 Submitting all answers...');
+            showScreen('waitingScreen');
+            document.querySelector('#waitingScreen h2').textContent = '✅ Quiz Complete!';
+            document.querySelector('#waitingScreen p').textContent = 'Thank you for playing! Your answers have been submitted.';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/submit-answers`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        team_id: teamId,
+                        answers: teamAnswers
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Answers submitted successfully');
+                } else {
+                    console.error('❌ Failed to submit answers');
+                }
+            } catch (error) {
+                console.error('❌ Error submitting answers:', error);
+            }
         }
 
         function showScreen(id) {
@@ -1126,21 +1308,28 @@
         }
 
         async function sendAnswer() {
-            const input = document.getElementById('playerAnswer');
-            const answerText = input ? input.value : '';
+            const input = document.getElementById('answerInput');
+            const answerText = input ? input.value.trim() : '';
             if (!answerText) return;
-            try {
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/question/${currentQuestionId}/submit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ team_id: teamId, answer: answerText })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('answerFormContainer').style.display = 'none';
-                    document.getElementById('answerStatus').style.display = 'block';
-                }
-            } catch (e) { console.error('Error submitting answer:', e); }
+            
+            console.log(`💾 Saving answer for Q${currentQuestionIndex + 1}: ${answerText}`);
+            
+            // Save answer locally
+            const question = allQuizQuestions[currentQuestionIndex];
+            teamAnswers.push({
+                question_id: question.id,
+                round: question.round,
+                question_number: question.number,
+                answer: answerText,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Disable input
+            input.disabled = true;
+            document.getElementById('submitAnswerBtn').disabled = true;
+            document.getElementById('submitAnswerBtn').textContent = '✅ Saved';
+            
+            console.log(`✅ Answer saved (${teamAnswers.length} total)`);
         }
 
         // Multiple Choice Functions
@@ -1156,30 +1345,34 @@
                 selectedBtn.classList.add('selected');
                 selectedOption = letter;
                 document.getElementById('submitMCBtn').disabled = false;
+                
+                // Auto-submit on selection
+                submitMultipleChoice();
             }
         }
 
         async function submitMultipleChoice() {
             if (!selectedOption) return;
 
-            try {
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/question/${currentQuestionId}/submit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        team_id: teamId,
-                        answer: selectedOption,
-                        is_multiple_choice: true
-                    })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('multipleChoiceContainer').style.display = 'none';
-                    document.getElementById('answerStatus').style.display = 'block';
-                }
-            } catch (e) {
-                console.error('Error submitting multiple choice answer:', e);
-            }
+            console.log(`💾 Saving MC answer for Q${currentQuestionIndex + 1}: ${selectedOption}`);
+            
+            // Save answer locally
+            const question = allQuizQuestions[currentQuestionIndex];
+            teamAnswers.push({
+                question_id: question.id,
+                round: question.round,
+                question_number: question.number,
+                answer: selectedOption,
+                timestamp: new Date().toISOString(),
+                is_multiple_choice: true
+            });
+            
+            // Disable all options
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.disabled = true;
+            });
+            
+            console.log(`✅ MC answer saved (${teamAnswers.length} total)`);
         }
 
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {

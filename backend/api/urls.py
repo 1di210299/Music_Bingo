@@ -76,6 +76,7 @@ urlpatterns = [
     path('pub-quiz/question/<int:question_id>/answer', pub_quiz_views.get_question_answer, name='pub-quiz-answer'),
     path('pub-quiz/question/<int:question_id>/submit', pub_quiz_views.submit_answer, name='pub-quiz-submit'),
     path('pub-quiz/question/<int:question_id>/buzz', pub_quiz_views.record_buzz, name='pub-quiz-buzz'),
+    path('pub-quiz/<str:session_id>/submit-answers', pub_quiz_views.submit_all_answers, name='pub-quiz-submit-all'),  # NEW: Batch submit
     # Removed polling endpoints - replaced by SSE:
     # path('pub-quiz/<str:session_id>/leaderboard', ...)
     # path('pub-quiz/<str:session_id>/stats', ...)
