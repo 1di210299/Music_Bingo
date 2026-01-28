@@ -308,14 +308,21 @@ Generate exactly {num_questions} questions now.
         
         difficulty_instruction = f"Generate exactly {easy_count} easy questions, {medium_count} medium questions, and {hard_count} hard questions (total {count})."
         
+        # Add timestamp to vary each generation
+        import time
+        timestamp = int(time.time() * 1000)  # Milliseconds for uniqueness
+        
         try:
             # Initialize OpenAI client
             client = OpenAI(api_key=api_key)
             
             if question_type == 'multiple_choice':
-                prompt = f"""Generate {count} multiple choice trivia questions about {genre_name}.
+                prompt = f"""Generate {count} UNIQUE and DIVERSE multiple choice trivia questions about {genre_name}.
 
 {difficulty_instruction}
+
+CRITICAL: Each question must be completely DIFFERENT from the others. Vary the topics, time periods, aspects, and focus areas within {genre_name}.
+Generation ID: {timestamp} (for tracking uniqueness)
 
 For each question, provide:
 - A clear, engaging question
@@ -324,7 +331,7 @@ For each question, provide:
 - A fun fact related to the answer
 - Difficulty level (easy, medium, or hard)
 
-Make questions diverse, interesting, and appropriate for a pub quiz audience.
+Make questions diverse, interesting, and appropriate for a pub quiz audience. Ensure NO repetition of similar themes or topics.
 
 Return ONLY a valid JSON array with this exact structure:
 [
@@ -338,9 +345,12 @@ Return ONLY a valid JSON array with this exact structure:
   }}
 ]"""
             else:  # written
-                prompt = f"""Generate {count} written answer trivia questions about {genre_name}.
+                prompt = f"""Generate {count} UNIQUE and DIVERSE written answer trivia questions about {genre_name}.
 
 {difficulty_instruction}
+
+CRITICAL: Each question must be completely DIFFERENT from the others. Vary the topics, time periods, aspects, and focus areas within {genre_name}.
+Generation ID: {timestamp} (for tracking uniqueness)
 
 For each question, provide:
 - A clear, engaging question that requires a specific written answer
@@ -349,7 +359,7 @@ For each question, provide:
 - A fun fact related to the answer
 - Difficulty level (easy, medium, or hard)
 
-Make questions diverse, interesting, and appropriate for a pub quiz audience.
+Make questions diverse, interesting, and appropriate for a pub quiz audience. Ensure NO repetition of similar themes or topics.
 
 Return ONLY a valid JSON array with this exact structure:
 [
@@ -365,11 +375,12 @@ Return ONLY a valid JSON array with this exact structure:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a professional pub quiz question writer. Generate only valid JSON. No markdown, no code blocks, just pure JSON."},
+                    {"role": "system", "content": "You are a professional pub quiz question writer. Generate only valid JSON. No markdown, no code blocks, just pure JSON. Each question must be completely unique and different from others."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.8,
-                max_tokens=2000
+                temperature=1.0,  # Increased for more diversity
+                max_tokens=2000,
+                seed=None  # Allow random variation
             )
             
             # Parse response
@@ -383,6 +394,13 @@ Return ONLY a valid JSON array with this exact structure:
                 content = content.strip()
             
             questions = json.loads(content)
+            
+            # Log generated questions for tracking
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🎯 Generated {len(questions)} {question_type} questions for {genre_name} (ID: {timestamp})")
+            for i, q in enumerate(questions, 1):
+                logger.info(f"  Q{i}: {q.get('question', 'N/A')[:80]}...")
             
             # Add question_type to each question
             for q in questions:

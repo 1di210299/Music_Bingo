@@ -1492,13 +1492,19 @@ def generate_answer_sheets(request):
         session_code = request.data.get('session_code')
         num_sheets = request.data.get('num_sheets', 30)
         
+        logger.info(f"📄 [ANSWER_SHEETS] Received request for session {session_code}, {num_sheets} sheets")
+        
         if not session_code:
+            logger.error(f"❌ [ANSWER_SHEETS] Missing session_code in request")
             return Response({'error': 'session_code required'}, status=400)
         
         # Get session
         session = get_session_by_code_or_id(session_code)
         if not session:
+            logger.error(f"❌ [ANSWER_SHEETS] Session {session_code} not found")
             return Response({'error': 'Session not found'}, status=404)
+        
+        logger.info(f"✅ [ANSWER_SHEETS] Session found: {session.venue_name}, {session.total_rounds} rounds")
         
         # Get session details
         venue_name = session.venue_name or "Perfect DJ Pub Quiz"
@@ -1538,10 +1544,13 @@ def generate_answer_sheets(request):
         
         # If no questions generated yet, return error
         if not questions_by_round:
+            logger.error(f"❌ [ANSWER_SHEETS] No questions found for session {session_code}")
             return Response({'error': 'Please generate quiz questions first before printing answer sheets'}, status=400)
         
+        logger.info(f"📊 [ANSWER_SHEETS] Found {len(questions_by_round)} rounds with questions")
+        
         # Generate PDF with actual questions
-        logger.info(f"Generating {num_sheets} answer sheets with questions for session {session_code}")
+        logger.info(f"🖨️ [ANSWER_SHEETS] Generating {num_sheets} answer sheets with questions for session {session_code}")
         pdf_buffer = generate_blank_templates(
             venue_name=venue_name,
             session_date=session_date,
@@ -1550,13 +1559,20 @@ def generate_answer_sheets(request):
             output_path=None
         )
         
+        # Get PDF size for logging
+        pdf_buffer.seek(0, 2)  # Seek to end
+        pdf_size = pdf_buffer.tell()  # Get position (file size)
+        pdf_buffer.seek(0)  # Reset to beginning
+        
+        logger.info(f"✅ [ANSWER_SHEETS] PDF generated successfully, size: {pdf_size / 1024:.2f} KB")
+        
         # Create response
         response = HttpResponse(pdf_buffer.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="pub_quiz_answer_sheets_{session_code}.pdf"'
         
-        logger.info(f"Successfully generated answer sheets for {session_code}")
+        logger.info(f"📥 [ANSWER_SHEETS] Sending PDF download for session {session_code}")
         return response
         
     except Exception as e:
-        logger.error(f"Error generating answer sheets: {e}")
+        logger.error(f"❌ [ANSWER_SHEETS] Error generating answer sheets: {e}", exc_info=True)
         return Response({'error': str(e)}, status=500)
