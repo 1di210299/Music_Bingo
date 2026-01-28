@@ -2247,7 +2247,17 @@ async function generateCards() {
                     // Download the PDF automatically
                     const timestamp = new Date().getTime();
                     const link = document.createElement('a');
-                    link.href = `${CONFIG.API_URL}${status.result.download_url}?t=${timestamp}`;
+                    
+                    // Check if download_url is already a complete URL (from GCS)
+                    const downloadUrl = status.result.download_url;
+                    if (downloadUrl.startsWith('http://') || downloadUrl.startsWith('https://')) {
+                        // Full URL from GCS (already includes signed parameters)
+                        link.href = downloadUrl;
+                    } else {
+                        // Relative path (fallback to local file)
+                        link.href = `${CONFIG.API_URL}${downloadUrl}?t=${timestamp}`;
+                    }
+                    
                     link.download = `music_bingo_${venueName.replace(/\s+/g, '_')}_${numPlayers}players.pdf`;
                     link.target = '_blank';
                     document.body.appendChild(link);
