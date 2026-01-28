@@ -1093,7 +1093,12 @@
                 autoAdvanceEnabled = stats.auto_advance_enabled;
                 autoAdvanceSeconds = stats.auto_advance_seconds || 15;
                 autoAdvancePaused = stats.auto_advance_paused || false;
-                questionStartedAt = stats.question_started_at;
+                
+                // Only update questionStartedAt if we don't have a local value
+                // (we're using local navigation, backend doesn't track this)
+                if (stats.question_started_at && !questionStartedAt) {
+                    questionStartedAt = stats.question_started_at;
+                }
                 
                 updateTimerUI();
                 document.getElementById('timerSeconds').value = autoAdvanceSeconds;
