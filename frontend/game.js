@@ -42,6 +42,24 @@ let gameState = {
     halfwayAnnounced: false  // Track if halfway announcement was made
 };
 
+/**
+ * Reset game state to initial values (for new sessions)
+ */
+function resetGameState() {
+    console.log('🔄 Resetting game state to initial values...');
+    gameState.pool = [];
+    gameState.remaining = [];
+    gameState.called = [];
+    gameState.currentTrack = null;
+    gameState.isPlaying = false;
+    gameState.announcementsData = null;
+    gameState.announcementsAI = null;
+    gameState.welcomeAnnounced = false;
+    gameState.halfwayAnnounced = false;
+    // Note: Keep venueName and sessionId as they're set by the session loader
+    console.log('✅ Game state reset complete');
+}
+
 // ============================================================================
 // VENUE-SPECIFIC CONFIGURATION STORAGE
 // ============================================================================
@@ -270,6 +288,16 @@ async function loadSessionAndStart(sessionId) {
         const session = await response.json();
         console.log('✅ Session loaded:', session);
 
+        // 🔧 CRITICAL FIX: Clear old game state from localStorage to start fresh
+        console.log('🧹 Clearing old game state for new session...');
+        localStorage.removeItem('gameState');
+        
+        // Reset in-memory game state to initial values
+        resetGameState();
+        
+        // Reset initialization flag so game can be re-initialized
+        gameInitialized = false;
+        
         // Hide setup modal
         document.getElementById('setupModal').style.display = 'none';
 
@@ -333,6 +361,18 @@ async function startGameFromConfig(config) {
 
     // Initialize the game (this will load pool, announcements, etc.)
     await initializeGame();
+    
+    // Clear UI display of called songs
+    const calledList = document.getElementById('calledList');
+    if (calledList) {
+        calledList.innerHTML = '';
+    }
+    
+    // Reset current track display
+    const currentTrackElement = document.getElementById('currentTrack');
+    if (currentTrackElement) {
+        currentTrackElement.innerHTML = '<em>No song playing</em>';
+    }
 
     console.log('✅ Game started successfully from session!');
 }
