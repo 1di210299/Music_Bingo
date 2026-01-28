@@ -514,10 +514,10 @@ def generate_jingle(request):
             progress=0,
             current_step='initializing',
             metadata={
-                'prompt': prompt,
+                'text': text,
                 'voice_id': voice_id,
-                'music_style': music_style,
-                'duration_seconds': duration_seconds
+                'music_prompt': music_prompt,
+                'voice_settings': voice_settings_payload
             }
         )
         
