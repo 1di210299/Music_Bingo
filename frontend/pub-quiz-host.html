@@ -2287,6 +2287,9 @@
                 return;
             }
             
+            // Get reference to button
+            const printButton = event?.target || document.querySelector('button[onclick="printAnswerSheets()"]');
+            
             // Get total number of players from teams
             const teamsCount = parseInt(document.getElementById('statTeams').textContent) || 0;
             
@@ -2311,9 +2314,10 @@
             showPrintSheetsModal(suggestedSheets, totalPlayers, async (numSheets) => {
                 try {
                     // Show loading message
-                    const originalText = event.target.textContent;
-                    event.target.innerHTML = '<span>⏳ Generating PDF...</span>';
-                    event.target.disabled = true;
+                    if (printButton) {
+                        printButton.innerHTML = '<span>⏳ Generating PDF...</span>';
+                        printButton.disabled = true;
+                    }
 
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/generate-answer-sheets`, {
                         method: 'POST',
@@ -2349,8 +2353,10 @@
                     showModal('error', 'Error', error.message);
                 } finally {
                     // Restore button
-                    event.target.innerHTML = '<span>🖨️ Print Answer Sheets</span>';
-                    event.target.disabled = false;
+                    if (printButton) {
+                        printButton.innerHTML = '<span>🖨️ Print</span>';
+                        printButton.disabled = false;
+                    }
                 }
             });
         }
