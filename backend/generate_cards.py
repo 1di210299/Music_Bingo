@@ -265,9 +265,24 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
     if pub_logo_path:
         try:
             from PIL import Image as PILImage
+            import base64
+            import io
+            
+            # Handle data URI (base64 encoded images)
+            if pub_logo_path.startswith('data:'):
+                print(f"🔍 Detected data URI for pub logo")
+                # Extract base64 data from data URI
+                # Format: data:image/png;base64,iVBORw0KG...
+                header, encoded = pub_logo_path.split(',', 1)
+                image_data = base64.b64decode(encoded)
+                pil_img = PILImage.open(io.BytesIO(image_data))
+                print(f"✅ Decoded base64 pub logo: {pil_img.format} {pil_img.size}")
+            else:
+                # Handle file path or URL
+                pil_img = PILImage.open(pub_logo_path)
+                print(f"✅ Opened pub logo from path: {pub_logo_path}")
             
             # Get original dimensions
-            pil_img = PILImage.open(pub_logo_path)
             orig_width, orig_height = pil_img.size
             aspect = orig_width / orig_height
             
@@ -282,10 +297,22 @@ def create_bingo_card(songs: List[Dict], card_num: int, venue_name: str,
                 new_height = max_height * mm
                 new_width = (max_height * aspect) * mm
             
-            pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
-            print(f"✅ Loaded pub logo from: {pub_logo_path}")
+            # For data URIs, create temporary BytesIO object for ReportLab
+            if pub_logo_path.startswith('data:'):
+                # ReportLab Image can accept a PIL Image or file path
+                # We need to convert PIL Image to something ReportLab can use
+                img_buffer = io.BytesIO()
+                pil_img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                pub_logo = Image(img_buffer, width=new_width, height=new_height)
+            else:
+                pub_logo = Image(pub_logo_path, width=new_width, height=new_height)
+            
+            print(f"✅ Successfully loaded pub logo with dimensions: {new_width/mm:.1f}mm x {new_height/mm:.1f}mm")
         except Exception as e:
             print(f"⚠️ Error loading pub logo: {e}")
+            import traceback
+            traceback.print_exc()
     
     # Create header table based on available logos
     if pub_logo and perfect_dj_logo:

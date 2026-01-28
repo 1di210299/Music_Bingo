@@ -82,7 +82,9 @@ def generate_cards_async(request):
         prize_full_house = data.get('prize_full_house', '')
         
         logger.info(f"Starting async card generation: {num_players} cards for '{venue_name}'")
-        logger.info(f"  pub_logo: {pub_logo}, social_media: {social_media}, include_qr: {include_qr}")
+        logger.info(f"  pub_logo: {pub_logo[:100] if pub_logo else 'None'}...")  # Truncate for readability
+        logger.info(f"  pub_logo type: {type(pub_logo)}, length: {len(pub_logo) if pub_logo else 0}")
+        logger.info(f"  social_media: {social_media}, include_qr: {include_qr}")
         logger.info(f"  prizes: {prize_4corners}, {prize_first_line}, {prize_full_house}")
         
         task_id = str(uuid.uuid4())
@@ -118,14 +120,23 @@ def generate_cards_async(request):
                     cmd.extend(['--game_date', game_date])
                 
                 if pub_logo:
+                    logger.info(f"Task {task_id}: pub_logo received: {pub_logo[:100]}...")
                     # Convert relative URL to absolute path
                     if pub_logo.startswith('/data/'):
                         logo_path = str(BASE_DIR / pub_logo[1:])  # Remove leading /
                         cmd.extend(['--pub_logo', logo_path])
-                        logger.info(f"Task {task_id}: Using pub logo: {logo_path}")
+                        logger.info(f"Task {task_id}: ✅ Using pub logo PATH: {logo_path}")
                     elif pub_logo.startswith('http'):
                         cmd.extend(['--pub_logo', pub_logo])
-                        logger.info(f"Task {task_id}: Using pub logo URL: {pub_logo}")
+                        logger.info(f"Task {task_id}: ✅ Using pub logo URL: {pub_logo}")
+                    elif pub_logo.startswith('data:'):
+                        # Handle data URI (base64 encoded image)
+                        cmd.extend(['--pub_logo', pub_logo])
+                        logger.info(f"Task {task_id}: ✅ Using pub logo DATA URI (base64)")
+                    else:
+                        logger.warning(f"Task {task_id}: ⚠️ Unknown pub_logo format, skipping. Starts with: {pub_logo[:20]}")
+                else:
+                    logger.info(f"Task {task_id}: ℹ️ No pub_logo provided")
                 
                 if social_media:
                     cmd.extend(['--social_media', social_media])
