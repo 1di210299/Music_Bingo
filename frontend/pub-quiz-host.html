@@ -615,6 +615,27 @@
             </div>
             </div>
 
+            <!-- Current Question Display -->
+            <div class="section" id="questionSection" style="display: none;">
+                <div class="section-title">📝 Current Question</div>
+                <div class="card" style="background: rgba(79, 172, 254, 0.05); border: 2px solid rgba(79, 172, 254, 0.2);">
+                    <div class="genre-tag" id="currentGenre">General Knowledge</div>
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 5px;">
+                            <span id="currentRound">Round 1</span> • <span id="questionNumber">Question 1</span>
+                        </div>
+                        <div id="questionText" style="font-size: 1.3em; font-weight: 600; line-height: 1.5; margin: 15px 0;">
+                            Question will appear here...
+                        </div>
+                    </div>
+                    <div id="answerDisplay" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0, 242, 254, 0.1); border-radius: 8px; border: 1px solid rgba(0, 242, 254, 0.3);">
+                        <div style="font-size: 0.8em; opacity: 0.7; margin-bottom: 5px;">✅ Correct Answer:</div>
+                        <div id="answerText" style="font-size: 1.2em; font-weight: 700; color: var(--secondary);"></div>
+                        <div id="multipleChoiceOptions" style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Settings Section -->
             <div class="section">
                 <div class="section-title">⚙️ Quiz Settings</div>
@@ -919,6 +940,12 @@
             
             currentQuestion = question;
             showingAnswer = false;
+            
+            // Show question section
+            const questionSection = document.getElementById('questionSection');
+            if (questionSection) {
+                questionSection.style.display = 'block';
+            }
             
             // Update UI
             document.getElementById('questionText').textContent = question.text;
@@ -1764,25 +1791,41 @@
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) {
-                            document.getElementById('correctAnswer').textContent = data.answer;
-                            document.getElementById('funFact').textContent = data.fun_fact || '';
+                            const answerText = document.getElementById('answerText');
+                            const multipleChoiceOptions = document.getElementById('multipleChoiceOptions');
+                            
+                            if (answerText) {
+                                answerText.textContent = data.answer;
+                            }
+                            
+                            // Show multiple choice options if available
+                            if (multipleChoiceOptions && currentQuestion.type === 'multiple_choice' && currentQuestion.options) {
+                                const optionsHTML = currentQuestion.options.map((opt, idx) => {
+                                    const letter = String.fromCharCode(65 + idx);
+                                    const isCorrect = opt === data.answer;
+                                    const style = isCorrect ? 'color: #00f2fe; font-weight: 700;' : '';
+                                    return `<div style="${style}">${letter}. ${opt} ${isCorrect ? '✓' : ''}</div>`;
+                                }).join('');
+                                multipleChoiceOptions.innerHTML = optionsHTML;
+                            } else if (multipleChoiceOptions) {
+                                multipleChoiceOptions.innerHTML = '';
+                            }
+                            
                             display.style.display = 'block';
-                            document.getElementById('btnShowAnswer').innerHTML = '<span>🙈 Hide Answer</span>';
+                            document.getElementById('btnShowAnswer').innerHTML = '<span>🙈 Hide</span>';
                         }
                     });
             } else {
                 display.style.display = 'none';
-                document.getElementById('btnShowAnswer').innerHTML = '<span>👁️ Show Answer</span>';
+                document.getElementById('btnShowAnswer').innerHTML = '<span>👁️ Answer</span>';
             }
         }
 
         async function speakAnswer() {
-            const answer = document.getElementById('correctAnswer').textContent;
-            const funFact = document.getElementById('funFact').textContent;
+            const answerText = document.getElementById('answerText');
+            const answer = answerText ? answerText.textContent : '';
             if (answer && answer !== '-') {
-                const textToSpeak = funFact
-                    ? `The correct answer is: ${answer}. ${funFact}`
-                    : `The correct answer is: ${answer}`;
+                const textToSpeak = `The correct answer is: ${answer}`;
                 await playTTS(textToSpeak, 'daniel');
             }
         }
