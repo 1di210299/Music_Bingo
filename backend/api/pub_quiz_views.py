@@ -638,6 +638,62 @@ def start_quiz(request, session_id):
     })
 
 
+@api_view(['GET'])
+def get_all_questions(request, session_id):
+    """Get all questions for local navigation (no SSE needed for host)"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    questions = QuizQuestion.objects.filter(session=session).order_by('round_number', 'question_number')
+    
+    questions_data = []
+    for q in questions:
+        questions_data.append({
+            'id': q.id,
+            'text': q.question_text,
+            'answer': q.correct_answer,
+            'fun_fact': q.fun_fact,
+            'round': q.round_number,
+            'number': q.question_number,
+            'genre': q.genre.name if q.genre else 'General Knowledge',
+            'difficulty': q.difficulty,
+            'points': q.get_points_value(),
+            'type': q.question_type,
+            'options': q.options if q.question_type == 'multiple_choice' else None
+        })
+    
+    return Response({
+        'success': True,
+        'questions': questions_data,
+        'total': len(questions_data)
+    })
+
+
+@api_view(['POST'])
+def sync_question_to_players(request, session_id):
+    """Sync current question to player screens via SSE"""
+    session = get_session_by_code_or_id(session_id)
+    if not session:
+        return Response({"error": "Session not found"}, status=404)
+    
+    data = request.data
+    round_num = data.get('round')
+    question_num = data.get('question_number')
+    
+    # Update session state
+    session.current_round = round_num
+    session.current_question = question_num
+    session.save()
+    
+    logger.info(f"📡 [SYNC] Host updated to Round {round_num}, Q{question_num}")
+    
+    return Response({
+        'success': True,
+        'message': 'Question synced to players'
+    })
+
+
 @api_view(['POST'])
 def start_countdown(request, session_id):
     """Marca el inicio del countdown después de que TTS termine"""

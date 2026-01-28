@@ -126,7 +126,8 @@ urlpatterns = [
     re_path(r'^assets/(?P<path>.*)$', lambda request, path: serve(request, path, document_root=str(FRONTEND_DIR / 'assets'))),
     re_path(r'^data/(?P<path>.*)$', lambda request, path: serve(request, path, document_root=str(DATA_DIR))),
     
-    # Index (catch-all) - MUST be last
-    path("", index_view),
+    # Index pages - MUST be last
+    path("index.html", index_view, name="index-html"),
+    path("", index_view, name="index"),
 ]
 

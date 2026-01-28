@@ -858,19 +858,18 @@
             // Default: ingress routing
             return '';
         })();
+        // LOCAL QUESTION MANAGEMENT - No SSE needed for host
+        let allQuestions = []; // All questions loaded at start
+        let currentQuestionIndex = 0; // Current position in questions array
         let currentQuestion = null;
-        let currentQuestionStatus = null; // Track the last known status for currentQuestion
         let showingAnswer = false;
-        let updateInterval = null;
         let questionsGenerated = false;
-        let hostEventSource = null;
         let lastSpokenQuestionId = null; // Track last spoken question to avoid repetition
         let isPlayingWelcomeMessage = false; // Flag to prevent question TTS during welcome
         let isPlayingQuestionTTS = false; // Flag to prevent multiple TTS from firing simultaneously
         let ttsQueue = []; // Queue for pending TTS requests
         let processingTTSQueue = false; // Flag to prevent concurrent queue processing
-        let currentRound = 0; // Track current round number
-        let roundGenres = {}; // Store round -> genre mapping
+        let sessionData = null; // Session configuration
         
         // Auto-advance timer variables
         let autoAdvanceEnabled = true; // Always enabled by default
@@ -880,8 +879,74 @@
         let countdownInterval = null;
         let lastQuestionStartedAt = null; // Track last question start to avoid restarting countdown
 
-        // SSE connection for host panel
-        function connectHostSSE() {
+        /**
+         * Load all questions from backend at init
+         */
+        async function loadAllQuestions() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/all-questions`);
+                if (!response.ok) {
+                    throw new Error('Failed to load questions');
+                }
+                const data = await response.json();
+                allQuestions = data.questions || [];
+                questionsGenerated = allQuestions.length > 0;
+                
+                console.log(`✅ Loaded ${allQuestions.length} questions for local navigation`);
+                
+                // Show first question if available
+                if (allQuestions.length > 0) {
+                    currentQuestionIndex = 0;
+                    showQuestion(allQuestions[0]);
+                }
+                
+                return allQuestions;
+            } catch (error) {
+                console.error('❌ Error loading questions:', error);
+                return [];
+            }
+        }
+
+        /**
+         * Display a question locally (no SSE needed)
+         */
+        function showQuestion(question) {
+            if (!question) return;
+            
+            currentQuestion = question;
+            showingAnswer = false;
+            
+            // Update UI
+            document.getElementById('questionText').textContent = question.text;
+            document.getElementById('questionNumber').textContent = `Question ${question.number}`;
+            document.getElementById('currentRound').textContent = `Round ${question.round}`;
+            document.getElementById('currentGenre').textContent = question.genre;
+            document.getElementById('answerDisplay').style.display = 'none';
+            
+            console.log(`📝 Showing Q${question.number} (Round ${question.round}): ${question.text}`);
+        }
+
+        /**
+         * Update button states based on current position
+         */
+        function updateButtonStates() {
+            const btnStart = document.getElementById('btnStart');
+            const btnNext = document.getElementById('btnNext');
+            const btnShowAnswer = document.getElementById('btnShowAnswer');
+            
+            if (btnStart) {
+                btnStart.disabled = !questionsGenerated || sessionData?.status !== 'pending';
+                btnStart.style.opacity = btnStart.disabled ? '0.5' : '1';
+            }
+            
+            if (btnNext) {
+                btnNext.disabled = currentQuestionIndex >= allQuestions.length - 1;
+            }
+            
+            if (btnShowAnswer) {
+                btnShowAnswer.disabled = !currentQuestion;
+            }
+        }
             if (hostEventSource) {
                 hostEventSource.close();
             }
@@ -1322,11 +1387,15 @@
                 }
 
                 const data = await response.json();
+                sessionData = data.session;
 
                 document.getElementById('venueName').textContent = data.session.venue_name;
 
-                // Connect to SSE stream for real-time updates
-                connectHostSSE();
+                // Load ALL questions at start for local navigation
+                await loadAllQuestions();
+                
+                // Update UI with initial state
+                updateButtonStates();
                 console.timeEnd('init-total');
             } catch (error) {
                 console.error('Error initializing host view:', error);
@@ -1341,94 +1410,39 @@
         document.addEventListener('DOMContentLoaded', init);
 
         async function startQuiz() {
-            // Validar que haya preguntas generadas
-            const btn = document.getElementById('btnStart');
-            if (btn.disabled) {
+            if (!questionsGenerated || allQuestions.length === 0) {
                 showModal('warning', 'Generate Questions First', 'Please generate questions first by clicking the "🔄 Generate" button!');
                 return;
             }
 
+            // LOCAL start - no backend call needed
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnShowAnswer').disabled = false;
+            document.getElementById('btnNext').disabled = false;
+            
+            console.log('[START] 🎬 Starting quiz with', allQuestions.length, 'questions');
+            
+            // Play welcome message
+            isPlayingWelcomeMessage = true;
+            const welcomeMessage = `Welcome to ${sessionData.venue_name}'s Pub Quiz! We have ${sessionData.total_teams || 0} teams competing today. Good luck everyone!`;
+            
             try {
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('btnStart').disabled = true;
-                    document.getElementById('btnShowAnswer').disabled = false;
-                    document.getElementById('btnNext').disabled = false;
-                    
-                    console.log('[TTS] 🎬 Starting welcome sequence');
-                    
-                    // Solo bloquear durante el welcome message
-                    isPlayingWelcomeMessage = true;
-                    
-                    try {
-                        // Reproducir mensaje de bienvenida
-                        if (data.welcome_message) {
-                            await playTTS(data.welcome_message, 'daniel');
-                            console.log('[TTS] ✅ Welcome message completed');
-                        }
-                    } catch (err) {
-                        console.error('[TTS] ❌ Error in welcome message:', err);
-                    } finally {
-                        // Desbloquear y forzar reproducción de la primera pregunta
-                        isPlayingWelcomeMessage = false;
-                        console.log('[TTS] 🔓 Welcome done, now playing first question...');
-                        
-                        // Forzar reproducción de la pregunta actual si existe
-                        if (currentQuestion && !showingAnswer) {
-                            console.log('[TTS] 🎯 Forcing playback of current question:', currentQuestion.id);
-                            isPlayingQuestionTTS = true;
-                            lastSpokenQuestionId = currentQuestion.id;
-                            
-                            const shouldAnnounceGenre = currentQuestion.number === 1;
-                            
-                            if (shouldAnnounceGenre) {
-                                const genreAnnouncement = `Round ${currentQuestion.round}: ${currentQuestion.genre}. Here comes the first question.`;
-                                console.log('[TTS] 📢 Announcing genre:', genreAnnouncement);
-                                playTTS(genreAnnouncement, 'daniel')
-                                    .then(() => {
-                                        console.log('[TTS] 🎙️ Now playing question:', currentQuestion.text);
-                                        return playTTS(currentQuestion.text, 'daniel');
-                                    })
-                                    .catch(err => console.error('[TTS] ❌ Error in TTS chain:', err))
-                                    .finally(async () => {
-                                        console.log('[TTS] ✅ TTS sequence complete, starting countdown');
-                                        isPlayingQuestionTTS = false;
-                                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
-                                            method: 'POST'
-                                        });
-                                        
-                                        // Process queued TTS if any
-                                        processTTSQueue();
-                                    });
-                            } else {
-                                console.log('[TTS] 🎙️ Playing question:', currentQuestion.text);
-                                playTTS(currentQuestion.text, 'daniel')
-                                    .catch(err => console.error('[TTS] ❌ Error playing question:', err))
-                                    .finally(async () => {
-                                        console.log('[TTS] ✅ TTS complete, starting countdown');
-                                        isPlayingQuestionTTS = false;
-                                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
-                                            method: 'POST'
-                                        });
-                                        
-                                        // Process queued TTS if any
-                                        processTTSQueue();
-                                    });
-                            }
-                        } else {
-                            console.log('[TTS] ⚠️ No current question to play after welcome');
-                        }
-                    }
-
-                    console.log('✅ Quiz started');
-                } else {
-                    showModal('error', 'Start Error', data.error || 'Could not start quiz');
+                await playTTS(welcomeMessage, 'daniel');
+                console.log('[TTS] ✅ Welcome message completed');
+            } catch (err) {
+                console.error('[TTS] ❌ Error in welcome message:', err);
+            } finally {
+                isPlayingWelcomeMessage = false;
+                // Play first question
+                if (allQuestions.length > 0) {
+                    currentQuestionIndex = 0;
+                    showQuestion(allQuestions[0]);
+                    playQuestionTTS(allQuestions[0]);
                 }
-            } catch (error) {
+            }
+            
+            console.log('✅ Quiz started locally');
+        }
                 console.error('Error starting quiz:', error);
                 showModal('error', 'Start Error', 'Error starting quiz');
             }
@@ -1765,51 +1779,95 @@
         }
 
         async function nextQuestion() {
+            // LOCAL navigation - no backend call needed
+            stopCountdown();
+            
+            if (currentQuestionIndex >= allQuestions.length - 1) {
+                // Quiz completed
+                showModal('success', '🎉 Quiz Completed!', 'All questions finished!');
+                document.getElementById('questionText').textContent = 'QUIZ COMPLETED! 🎉';
+                document.getElementById('currentGenre').textContent = 'FINISH';
+                return;
+            }
+            
+            // Move to next question
+            currentQuestionIndex++;
+            const nextQ = allQuestions[currentQuestionIndex];
+            
+            // Check for halftime (end of round 1, before round 2)
+            const prevQ = allQuestions[currentQuestionIndex - 1];
+            if (prevQ && nextQ && prevQ.round !== nextQ.round && nextQ.round === 2) {
+                console.log('[HALFTIME] 🍻 DETECTED! Moving from round', prevQ.round, 'to', nextQ.round);
+                const halftimeMessage = `That's the end of the first round! Let's take a short break. Grab a drink, chat with your team. We'll be back in a moment for the next round!`;
+                playTTS(halftimeMessage, 'daniel').then(() => {
+                    console.log('[HALFTIME] ✅ Announcement complete');
+                    showModal('info', '🍻 HALFTIME BREAK!', 'Take a 1-2 minute break!\n\nGrab drinks, discuss answers with your team.\n\nClick "Ready!" when you want to continue to the next round.', 'Ready! 🎉', () => {
+                        // After halftime, show next question
+                        showQuestion(nextQ);
+                        playQuestionTTS(nextQ);
+                    });
+                });
+                document.getElementById('questionText').textContent = 'HALFTIME BREAK 🍻';
+                document.getElementById('currentGenre').textContent = 'BREAK - Relax & Refresh!';
+                return;
+            }
+            
+            // Normal question transition
+            showQuestion(nextQ);
+            playQuestionTTS(nextQ);
+            updateButtonStates();
+            
+            // Notify backend for player screens sync
+            notifyBackendQuestionChange(nextQ);
+        }
+
+        /**
+         * Play TTS for a question
+         */
+        async function playQuestionTTS(question) {
+            if (!question || isPlayingQuestionTTS) return;
+            
+            isPlayingQuestionTTS = true;
+            lastSpokenQuestionId = question.id;
+            
             try {
-                const response = await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/next`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-
-                console.log('[NEXT] 🔍 Response data:', {
-                    success: data.success,
-                    status: data.status,
-                    current_round: data.current_round,
-                    current_question: data.current_question
-                });
-
-                if (data.success) {
-                    if (data.status === 'halftime') {
-                        console.log('[HALFTIME] 🍻 DETECTED! Round:', data.current_round, 'Question:', data.current_question);
-                        console.log('[HALFTIME] 🔔 Announcing halftime break...');
-                        
-                        // Stop countdown during halftime
-                        stopCountdown();
-                        
-                        // Play halftime announcement
-                        const halftimeMessage = `That's the end of the first round! Let's take a short break. Grab a drink, chat with your team. We'll be back in a moment for the next round!`;
-                        playTTS(halftimeMessage, 'daniel').then(() => {
-                            console.log('[HALFTIME] ✅ Announcement complete');
-                            showModal('info', '🍻 HALFTIME BREAK!', 'Take a 1-2 minute break!\n\nGrab drinks, discuss answers with your team.\n\nClick "Ready!" when you want to continue to the next round.', 'Ready! 🎉');
-                        }).catch(err => {
-                            console.error('[HALFTIME] ❌ Error playing announcement:', err);
-                            showModal('info', '🍻 HALFTIME BREAK!', 'Take a 1-2 minute break!\n\nGrab drinks, discuss answers with your team.\n\nClick "Ready!" when you want to continue to the next round.', 'Ready! 🎉');
-                        });
-                        
-                        document.getElementById('questionText').textContent = 'HALFTIME BREAK 🍻';
-                        document.getElementById('currentGenre').textContent = 'BREAK - Relax & Refresh!';
-                        console.log('[HALFTIME] ✅ UI updated');
-                    } else if (data.status === 'completed') {
-                        stopCountdown();
-                        showModal('success', '🎉 Quiz Completed!', 'Check the final leaderboard!');
-                        document.getElementById('questionText').textContent = 'QUIZ COMPLETED! 🎉';
-                        document.getElementById('currentGenre').textContent = 'FINISH';
-                    }
-                    // El SSE actualizará automáticamente la pregunta y stats
-                    console.log('✅ Moved to next question - SSE will update the display');
+                // Announce genre if first question of round
+                if (question.number === 1) {
+                    const genreAnnouncement = `Round ${question.round}: ${question.genre}. Here comes the first question.`;
+                    console.log('[TTS] 📢 Announcing genre:', genreAnnouncement);
+                    await playTTS(genreAnnouncement, 'daniel');
                 }
+                
+                console.log('[TTS] 🎙️ Playing question:', question.text);
+                await playTTS(question.text, 'daniel');
+                
+                console.log('[TTS] ✅ TTS complete, starting countdown');
+                // Start countdown locally
+                questionStartedAt = new Date().toISOString();
+                startCountdown();
+            } catch (err) {
+                console.error('[TTS] ❌ Error:', err);
+            } finally {
+                isPlayingQuestionTTS = false;
+            }
+        }
+
+        /**
+         * Notify backend of question change (for player screen sync only)
+         */
+        async function notifyBackendQuestionChange(question) {
+            try {
+                await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/sync-question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        round: question.round,
+                        question_number: question.number
+                    })
+                });
+                console.log(`📡 Notified backend: Round ${question.round}, Q${question.number}`);
             } catch (error) {
-                console.error('Error moving to next question:', error);
+                console.warn('⚠️ Failed to notify backend (non-critical):', error);
             }
         }
 
