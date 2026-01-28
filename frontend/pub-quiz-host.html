@@ -867,6 +867,8 @@
         let lastSpokenQuestionId = null; // Track last spoken question to avoid repetition
         let isPlayingWelcomeMessage = false; // Flag to prevent question TTS during welcome
         let isPlayingQuestionTTS = false; // Flag to prevent multiple TTS from firing simultaneously
+        let ttsQueue = []; // Queue for pending TTS requests
+        let processingTTSQueue = false; // Flag to prevent concurrent queue processing
         let currentRound = 0; // Track current round number
         let roundGenres = {}; // Store round -> genre mapping
         
@@ -1151,6 +1153,9 @@
                                 method: 'POST'
                             });
                             console.log('[TTS] ✅ start-countdown API called');
+                            
+                            // Process queued TTS if any
+                            processTTSQueue();
                         });
                 } else {
                     // Just play the question, then start countdown
@@ -1168,10 +1173,22 @@
                                 method: 'POST'
                             });
                             console.log('[TTS] ✅ start-countdown API called');
+                            
+                            // Process queued TTS if any
+                            processTTSQueue();
                         });
                 }
             } else if (isNewQuestion && isPlayingQuestionTTS) {
-                console.log('[TTS] ⏸️ Skipping TTS - already playing for another question');
+                console.log('[TTS] ⏸️ TTS already playing, enqueuing question', question.id);
+                ttsQueue.push({
+                    questionId: question.id,
+                    questionText: question.text,
+                    round: question.round,
+                    number: question.number,
+                    genre: question.genre,
+                    shouldAnnounceGenre
+                });
+                console.log('[TTS] 📋 Queue size:', ttsQueue.length);
             } else if (isNewQuestion) {
                 console.log('[TTS] ⏭️ Skipping TTS - conditions not met (see check above)');
             }
@@ -1383,6 +1400,9 @@
                                         await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
                                             method: 'POST'
                                         });
+                                        
+                                        // Process queued TTS if any
+                                        processTTSQueue();
                                     });
                             } else {
                                 console.log('[TTS] 🎙️ Playing question:', currentQuestion.text);
@@ -1394,6 +1414,9 @@
                                         await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
                                             method: 'POST'
                                         });
+                                        
+                                        // Process queued TTS if any
+                                        processTTSQueue();
                                     });
                             }
                         } else {
@@ -1655,6 +1678,49 @@
                     reject(e);
                 }
             });
+        }
+
+        // Process queued TTS requests
+        async function processTTSQueue() {
+            if (processingTTSQueue || ttsQueue.length === 0 || isPlayingQuestionTTS) {
+                return;
+            }
+            
+            processingTTSQueue = true;
+            console.log('[TTS_QUEUE] 🔄 Processing queue, size:', ttsQueue.length);
+            
+            const queuedItem = ttsQueue.shift();
+            console.log('[TTS_QUEUE] 🎯 Playing queued question:', queuedItem.questionId);
+            
+            lastSpokenQuestionId = queuedItem.questionId;
+            isPlayingQuestionTTS = true;
+            
+            try {
+                if (queuedItem.shouldAnnounceGenre) {
+                    const genreAnnouncement = `Round ${queuedItem.round}: ${queuedItem.genre}. Here comes the first question.`;
+                    console.log('[TTS_QUEUE] 📢 Announcing genre:', genreAnnouncement);
+                    await playTTS(genreAnnouncement, 'daniel');
+                }
+                
+                console.log('[TTS_QUEUE] 🎙️ Playing question:', queuedItem.questionText);
+                await playTTS(queuedItem.questionText, 'daniel');
+                
+                console.log('[TTS_QUEUE] ✅ TTS complete, starting countdown');
+                await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                    method: 'POST'
+                });
+            } catch (err) {
+                console.error('[TTS_QUEUE] ❌ Error:', err);
+            } finally {
+                isPlayingQuestionTTS = false;
+                processingTTSQueue = false;
+                
+                // Process next item in queue if any
+                if (ttsQueue.length > 0) {
+                    console.log('[TTS_QUEUE] 🔄 More items in queue, continuing...');
+                    setTimeout(() => processTTSQueue(), 100);
+                }
+            }
         }
 
         async function toggleAnswer() {
