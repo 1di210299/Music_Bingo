@@ -46,8 +46,12 @@
                 
                 <div class="setup-field">
                     <label for="setupNumPlayers">👥 Number of Players *</label>
-                    <input type="number" id="setupNumPlayers" value="25" min="5" max="100" required>
+                    <input type="number" id="setupNumPlayers" value="25" min="5" max="100" required oninput="updateSongEstimation()">
                     <small>How many people will play? (affects song selection)</small>
+                </div>
+                
+                <div class="setup-estimation" id="setupEstimation">
+                    📊 Estimated: ~75 songs, 38 minutes
                 </div>
                 
                 <div class="setup-field">
@@ -212,10 +216,6 @@
                         </div>
                     </div>
                     <small>These will appear on the generated bingo cards</small>
-                </div>
-                
-                <div class="setup-estimation" id="setupEstimation">
-                    📊 Estimated: ~75 songs, 38 minutes
                 </div>
                 
                 <div class="setup-field" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; border-radius: 10px; margin-top: 20px;">

@@ -222,8 +222,12 @@
                 
                 <div class="setup-field">
                     <label for="setupNumPlayers">👥 Number of Players *</label>
-                    <input type="number" id="setupNumPlayers" value="25" min="5" max="100" required>
+                    <input type="number" id="setupNumPlayers" value="25" min="5" max="100" required oninput="updateSongEstimation()">
                     <small>How many people will play? (affects song selection)</small>
+                </div>
+                
+                <div class="setup-estimation" id="setupEstimation">
+                    📊 Estimated: ~75 songs, 38 minutes
                 </div>
                 
                 <div class="setup-field">
@@ -388,10 +392,6 @@
                         </div>
                     </div>
                     <small>These will appear on the generated bingo cards</small>
-                </div>
-                
-                <div class="setup-estimation" id="setupEstimation">
-                    📊 Estimated: ~75 songs, 38 minutes
                 </div>
                 
                 <div class="setup-field" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 15px; border-radius: 10px; margin-top: 20px;">
@@ -675,6 +675,33 @@
 
             preview.textContent = `QR will link to: ${urls[platform]}`;
         }
+
+        // Calculate song estimation based on number of players (same formula as game.js)
+        function updateSongEstimation() {
+            const numPlayers = parseInt(document.getElementById('setupNumPlayers').value) || 25;
+            
+            // Same formula as game.js: calculateOptimalSongs
+            const MULTIPLIER = 3;
+            let baseSongs = Math.floor(numPlayers * MULTIPLIER);
+            baseSongs = Math.max(baseSongs, 30);
+            baseSongs = Math.min(baseSongs, 150);
+            
+            const targetDurationMinutes = 45;
+            const songsPerMinute = 2;
+            const maxSongsForDuration = targetDurationMinutes * songsPerMinute;
+            const optimalSongs = Math.min(baseSongs, maxSongsForDuration);
+            
+            // Same formula as game.js: estimateGameDuration
+            const estimatedMinutes = Math.floor((optimalSongs * 30) / 60);
+            
+            document.getElementById('setupEstimation').textContent = 
+                `📊 Estimated: ~${optimalSongs} songs, ${estimatedMinutes} minutes`;
+        }
+
+        // Initialize estimation on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSongEstimation();
+        });
 
         function continueSession(sessionId) {
             window.location.href = `/game?session=${sessionId}`;

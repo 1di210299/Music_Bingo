@@ -555,3 +555,4 @@ class BingoSession(models.Model):
         """Get number of songs played"""
         return len(self.songs_played)
 
+
