@@ -1351,9 +1351,49 @@
                     } catch (err) {
                         console.error('[TTS] ❌ Error in welcome message:', err);
                     } finally {
-                        // Desbloquear - el auto-play se encargará de la primera pregunta
+                        // Desbloquear y forzar reproducción de la primera pregunta
                         isPlayingWelcomeMessage = false;
-                        console.log('[TTS] 🔓 Welcome done, auto-play will handle first question');
+                        console.log('[TTS] 🔓 Welcome done, now playing first question...');
+                        
+                        // Forzar reproducción de la pregunta actual si existe
+                        if (currentQuestion && !showingAnswer) {
+                            console.log('[TTS] 🎯 Forcing playback of current question:', currentQuestion.id);
+                            isPlayingQuestionTTS = true;
+                            lastSpokenQuestionId = currentQuestion.id;
+                            
+                            const shouldAnnounceGenre = currentQuestion.number === 1;
+                            
+                            if (shouldAnnounceGenre) {
+                                const genreAnnouncement = `Round ${currentQuestion.round}: ${currentQuestion.genre}. Here comes the first question.`;
+                                console.log('[TTS] 📢 Announcing genre:', genreAnnouncement);
+                                playTTS(genreAnnouncement, 'daniel')
+                                    .then(() => {
+                                        console.log('[TTS] 🎙️ Now playing question:', currentQuestion.text);
+                                        return playTTS(currentQuestion.text, 'daniel');
+                                    })
+                                    .catch(err => console.error('[TTS] ❌ Error in TTS chain:', err))
+                                    .finally(async () => {
+                                        console.log('[TTS] ✅ TTS sequence complete, starting countdown');
+                                        isPlayingQuestionTTS = false;
+                                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                                            method: 'POST'
+                                        });
+                                    });
+                            } else {
+                                console.log('[TTS] 🎙️ Playing question:', currentQuestion.text);
+                                playTTS(currentQuestion.text, 'daniel')
+                                    .catch(err => console.error('[TTS] ❌ Error playing question:', err))
+                                    .finally(async () => {
+                                        console.log('[TTS] ✅ TTS complete, starting countdown');
+                                        isPlayingQuestionTTS = false;
+                                        await fetch(`${BASE_URL}/api/pub-quiz/${SESSION_ID}/start-countdown`, {
+                                            method: 'POST'
+                                        });
+                                    });
+                            }
+                        } else {
+                            console.log('[TTS] ⚠️ No current question to play after welcome');
+                        }
                     }
 
                     console.log('✅ Quiz started');
