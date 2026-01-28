@@ -1712,12 +1712,12 @@
                 const controller = new AbortController();
                 
                 try {
-                    // 🔧 FIX: Add 30-second timeout with AbortController
+                    // 🔧 FIX: Add 50-second timeout with AbortController (backend has 45s)
                     timeoutId = setTimeout(() => {
-                        console.error('[TTS] ⏱️ Timeout after 30 seconds for text:', txt.substring(0, 50));
+                        console.error('[TTS] ⏱️ Timeout after 50 seconds for text:', txt.substring(0, 50));
                         controller.abort();
                         reject(new Error('TTS timeout'));
-                    }, 30000);
+                    }, 50000);
                     
                     console.log('[TTS] 📡 Fetching audio from API...');
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/tts`, {
@@ -1926,11 +1926,11 @@
             lastSpokenQuestionId = question.id;
             
             try {
-                // Announce genre if first question of round
+                // Announce genre if first question of round (split into 2 parts for faster TTS)
                 if (question.number === 1) {
-                    const genreAnnouncement = `Round ${question.round}: ${question.genre}. Here comes the first question.`;
-                    console.log('[TTS] 📢 Announcing genre:', genreAnnouncement);
-                    await playTTS(genreAnnouncement, 'daniel');
+                    console.log('[TTS] 📢 Announcing round:', question.round, question.genre);
+                    await playTTS(`Round ${question.round}: ${question.genre}`, 'daniel');
+                    await playTTS(`Here comes the first question.`, 'daniel');
                 }
                 
                 console.log('[TTS] 🎙️ Playing question:', question.text);

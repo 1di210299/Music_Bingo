@@ -1527,6 +1527,7 @@ def generate_quiz_tts(request):
         
         url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}'
         
+        # Use streaming for faster response
         response = requests.post(
             url,
             headers={
@@ -1545,7 +1546,8 @@ def generate_quiz_tts(request):
                 'optimize_streaming_latency': 1,
                 'output_format': 'mp3_44100_128'
             },
-            timeout=30
+            timeout=45,  # Keep for cold starts
+            stream=True  # Enable streaming
         )
         
         if not response.ok:
@@ -1555,7 +1557,13 @@ def generate_quiz_tts(request):
                 'details': response.text
             }, status=response.status_code)
         
-        return HttpResponse(response.content, content_type='audio/mpeg')
+        # Stream audio chunks instead of waiting for complete response
+        def audio_stream():
+            for chunk in response.iter_content(chunk_size=4096):
+                if chunk:
+                    yield chunk
+        
+        return StreamingHttpResponse(audio_stream(), content_type='audio/mpeg')
         
     except Exception as e:
         logger.error(f'TTS generation error: {e}')
