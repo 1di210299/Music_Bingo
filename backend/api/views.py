@@ -954,12 +954,24 @@ def create_jingle_schedule(request):
             
             # Get venue_name from query params
             venue_name = request.GET.get('venue_name')
+            session_id = request.GET.get('session_id')
             
-            # Filter schedules
-            if venue_name:
+            # Filter schedules with priority: session > venue > global
+            if session_id:
+                # Most specific: schedules for this specific session
+                all_schedules = JingleSchedule.objects.filter(
+                    models.Q(session__session_id=session_id) |
+                    models.Q(session__isnull=True, venue_name=venue_name) |
+                    models.Q(session__isnull=True, venue_name__isnull=True) |
+                    models.Q(session__isnull=True, venue_name='')
+                ).order_by('-priority', '-created_at')
+                logger.info(f'Filtering schedules for session: {session_id}, venue: {venue_name}')
+            elif venue_name:
                 # Get schedules for specific venue OR schedules without venue (global)
                 all_schedules = JingleSchedule.objects.filter(
-                    models.Q(venue_name=venue_name) | models.Q(venue_name__isnull=True) | models.Q(venue_name='')
+                    models.Q(session__isnull=True, venue_name=venue_name) |
+                    models.Q(session__isnull=True, venue_name__isnull=True) |
+                    models.Q(session__isnull=True, venue_name='')
                 ).order_by('-priority', '-created_at')
                 logger.info(f'Filtering schedules for venue: {venue_name}')
             else:
@@ -974,6 +986,7 @@ def create_jingle_schedule(request):
                     'jingle_name': schedule.jingle_name,
                     'jingle_filename': schedule.jingle_filename,
                     'venue_name': schedule.venue_name,
+                    'session_id': schedule.session.session_id if schedule.session else None,
                     'start_date': schedule.start_date.strftime('%Y-%m-%d'),
                     'end_date': schedule.end_date.strftime('%Y-%m-%d') if schedule.end_date else None,
                     'time_start': schedule.time_start.strftime('%H:%M') if schedule.time_start else None,
@@ -1195,14 +1208,28 @@ def get_active_jingles(request):
         
         # Get venue_name from query params
         venue_name = request.GET.get('venue_name')
+        session_id = request.GET.get('session_id')
         
-        # Filter schedules by venue
-        if venue_name:
-            # Get schedules for specific venue OR global schedules (no venue set)
+        # Filter schedules by session (most specific) > venue > global
+        if session_id:
+            # Filter: session-specific OR (no session AND venue match) OR (no session AND no venue = global)
             all_schedules = JingleSchedule.objects.filter(
                 enabled=True
             ).filter(
-                django_models.Q(venue_name=venue_name) | django_models.Q(venue_name__isnull=True) | django_models.Q(venue_name='')
+                django_models.Q(session__session_id=session_id) |
+                django_models.Q(session__isnull=True, venue_name=venue_name) |
+                django_models.Q(session__isnull=True, venue_name__isnull=True) |
+                django_models.Q(session__isnull=True, venue_name='')
+            ).order_by('-priority', '-created_at')
+            logger.info(f'Filtering active jingles for session: {session_id}, venue: {venue_name}')
+        elif venue_name:
+            # Get schedules for specific venue OR global schedules (no venue/session set)
+            all_schedules = JingleSchedule.objects.filter(
+                enabled=True
+            ).filter(
+                django_models.Q(session__isnull=True, venue_name=venue_name) |
+                django_models.Q(session__isnull=True, venue_name__isnull=True) |
+                django_models.Q(session__isnull=True, venue_name='')
             ).order_by('-priority', '-created_at')
             logger.info(f'Filtering active jingles for venue: {venue_name}')
         else:

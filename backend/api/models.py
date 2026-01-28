@@ -68,6 +68,16 @@ class JingleSchedule(models.Model):
         help_text="Optional: Venue name to filter schedules (e.g., 'Admiral Rodney'). Leave empty for all venues."
     )
     
+    # Session Filter (most specific)
+    session = models.ForeignKey(
+        'BingoSession',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='jingle_schedules',
+        help_text="Optional: Specific bingo session. If set, this schedule applies only to this session. If null, uses venue_name filtering."
+    )
+    
     # Date Range
     start_date = models.DateField(
         help_text="First day this jingle becomes active"

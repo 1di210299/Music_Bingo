@@ -245,32 +245,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // No session parameter - show setup modal
-    console.log('⚙️ No session found, showing setup modal');
-
-    // Always show setup modal on page load
-    // This allows users to see their saved configuration
-    const savedVenueName = localStorage.getItem('venueName');
-
-    if (savedVenueName) {
-        console.log(`📂 Loading saved configuration for: ${savedVenueName}`);
-
-        // Load venue config from database
-        const venueConfig = await loadVenueConfig(savedVenueName);
-
-        if (venueConfig) {
-            console.log('✅ Configuration found, displaying setup modal with saved settings');
-            // Show setup modal with loaded configuration
-            await initializeSetupModal();
-        } else {
-            console.log('⚠️ No configuration found, showing blank setup modal');
-            await initializeSetupModal();
-        }
-    } else {
-        // First time setup - no venue name saved
-        console.log('⚙️ First time setup required');
-        await initializeSetupModal();
-    }
+    // No session parameter - redirect to index to create a new session
+    console.log('❌ No session ID found, redirecting to index.html...');
+    window.location.href = 'index.html';
 });
 
 /**
