@@ -102,8 +102,10 @@ urlpatterns = [
     # HTML pages - MUST come before catch-all patterns
     path("jingle-manager", jingle_manager_view, name="jingle-manager-no-slash"),
     path("jingle-manager/", jingle_manager_view, name="jingle-manager"),
+    path("jingle-manager.html", jingle_manager_view, name="jingle-manager-html"),
     path("jingle", jingle_view, name="jingle-no-slash"),
     path("jingle/", jingle_view, name="jingle"),
+    path("jingle.html", jingle_view, name="jingle-html"),
     
     # Pub Quiz pages
     path("pub-quiz-register.html", pub_quiz_register_view, name="pub-quiz-register"),

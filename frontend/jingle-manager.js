@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     loadJingles();
     loadSchedules();
+    loadSessions(); // Load available sessions for the venue
     setupEventListeners();
 });
 
@@ -118,6 +119,45 @@ async function loadJingles() {
     } catch (error) {
         console.error('❌ Error loading jingles:', error);
         showNotification('Failed to load jingles', 'error');
+    }
+}
+
+// Load available bingo sessions for venue
+async function loadSessions() {
+    try {
+        const url = `${CONFIG.API_URL}/api/bingo/sessions`;
+        console.log('📥 Loading bingo sessions from:', url);
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.warn('⚠️ Failed to load sessions. Status:', response.status);
+            return;
+        }
+        
+        const data = await response.json();
+        const sessions = data.sessions || [];
+        console.log('✅ Loaded sessions:', sessions.length, 'items');
+        
+        // Filter sessions by venue if currentVenueName is set
+        const venueSessions = currentVenueName 
+            ? sessions.filter(s => s.venue_name === currentVenueName)
+            : sessions;
+        
+        // Populate session dropdown
+        const select = document.getElementById('sessionSelect');
+        select.innerHTML = currentVenueName 
+            ? `<option value="">All sessions for ${currentVenueName}</option>`
+            : '<option value="">All venues (global)</option>';
+        
+        venueSessions.forEach(session => {
+            const option = document.createElement('option');
+            option.value = session.session_id;
+            option.textContent = `${session.venue_name} - ${session.session_id.substring(0, 8)} (${session.status})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('❌ Error loading sessions:', error);
     }
 }
 
@@ -346,6 +386,7 @@ async function handleSubmit(e) {
         jingle_name: document.getElementById('jingleName').value.trim(),
         jingle_filename: document.getElementById('jingleFilename').value,
         venue_name: currentVenueName || '',
+        session_id: document.getElementById('sessionSelect').value || null,
         start_date: document.getElementById('startDate').value,
         end_date: document.getElementById('endDate').value || null,
         time_start: document.getElementById('timeStart').value || null,

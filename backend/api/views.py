@@ -1136,11 +1136,24 @@ def create_jingle_schedule(request):
         # Get optional venue_name
         venue_name = data.get('venue_name', '').strip() or None
         
+        # Get optional session_id and resolve to BingoSession instance
+        session_id = data.get('session_id', '').strip() or None
+        session_instance = None
+        if session_id:
+            try:
+                from .models import BingoSession
+                session_instance = BingoSession.objects.get(session_id=session_id)
+                logger.info(f"Linking schedule to session: {session_id}")
+            except BingoSession.DoesNotExist:
+                logger.warning(f"Session not found: {session_id}, creating schedule without session link")
+                session_instance = None
+        
         # Create JingleSchedule
         schedule = JingleSchedule.objects.create(
             jingle_name=jingle_name,
             jingle_filename=jingle_filename,
             venue_name=venue_name,
+            session=session_instance,
             start_date=start_date_obj,
             end_date=end_date_obj,
             time_start=time_start_obj,
