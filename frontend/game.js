@@ -2156,12 +2156,15 @@ async function generateCards() {
         console.log('📋 Preparing to generate cards (ASYNC MODE)...');
         console.log('   Venue:', venueName);
         console.log('   Players:', numPlayers);
-        console.log('   Pub Logo (stored):', pubLogo);
+        console.log('   Pub Logo (stored):', pubLogo ? `${pubLogo.substring(0, 100)}...` : 'None');
 
         // If pubLogo is a relative path, convert to full URL
-        if (pubLogo && !pubLogo.startsWith('http')) {
+        // Skip conversion for data URIs and full URLs
+        if (pubLogo && !pubLogo.startsWith('http') && !pubLogo.startsWith('data:')) {
             pubLogo = `${CONFIG.API_URL}${pubLogo}`;
             console.log('   Pub Logo (converted):', pubLogo);
+        } else if (pubLogo) {
+            console.log('   Pub Logo: Using as-is (data URI or full URL)');
         }
 
         const socialMedia = localStorage.getItem('socialMedia') || '';
