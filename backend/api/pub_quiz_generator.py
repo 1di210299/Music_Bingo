@@ -280,9 +280,15 @@ Generate exactly {num_questions} questions now.
         Generate questions using OpenAI API
         difficulty_mix: {'easy': 3, 'medium': 4, 'hard': 3} - desired counts per round
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"🎯 [OPENAI] Generating {count} {question_type} questions for genre: {genre_name}")
+        
         api_key = os.getenv('OPENAI_API_KEY', '')
         
         if not api_key:
+            logger.warning(f"⚠️ [OPENAI] No API key found, using fallback questions")
             # Fallback to sample questions if no API key
             return self._get_fallback_questions(genre_name, count, question_type)
         
@@ -312,9 +318,13 @@ Generate exactly {num_questions} questions now.
         import time
         timestamp = int(time.time() * 1000)  # Milliseconds for uniqueness
         
+        logger.info(f"📊 [OPENAI] Difficulty split: Easy={easy_count}, Medium={medium_count}, Hard={hard_count}")
+        logger.info(f"🔢 [OPENAI] Generation ID: {timestamp}")
+        
         try:
             # Initialize OpenAI client
             client = OpenAI(api_key=api_key)
+            logger.info(f"🤖 [OPENAI] Calling GPT-4o-mini with temperature=1.0 for maximum diversity")
             
             if question_type == 'multiple_choice':
                 prompt = f"""Generate {count} UNIQUE and DIVERSE multiple choice trivia questions about {genre_name}.
@@ -383,6 +393,8 @@ Return ONLY a valid JSON array with this exact structure:
                 seed=None  # Allow random variation
             )
             
+            logger.info(f"✅ [OPENAI] Received response from GPT-4o-mini")
+            
             # Parse response
             content = response.choices[0].message.content.strip()
             
@@ -396,11 +408,12 @@ Return ONLY a valid JSON array with this exact structure:
             questions = json.loads(content)
             
             # Log generated questions for tracking
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"🎯 Generated {len(questions)} {question_type} questions for {genre_name} (ID: {timestamp})")
+            logger.info(f"🎯 [OPENAI] Successfully generated {len(questions)} {question_type} questions for {genre_name} (ID: {timestamp})")
+            logger.info(f"📝 [OPENAI] Question preview:")
             for i, q in enumerate(questions, 1):
-                logger.info(f"  Q{i}: {q.get('question', 'N/A')[:80]}...")
+                question_preview = q.get('question', 'N/A')[:100]
+                difficulty = q.get('difficulty', 'unknown')
+                logger.info(f"  Q{i} [{difficulty}]: {question_preview}...")
             
             # Add question_type to each question
             for q in questions:
@@ -409,10 +422,12 @@ Return ONLY a valid JSON array with this exact structure:
                     q['options'] = {}
                     q['correct_option'] = ''
             
+            logger.info(f"✅ [OPENAI] Question generation complete for {genre_name}")
             return questions
             
         except Exception as e:
-            print(f"Error generating OpenAI questions: {e}")
+            logger.error(f"❌ [OPENAI] Error generating questions: {e}", exc_info=True)
+            logger.warning(f"⚠️ [OPENAI] Falling back to sample questions")
             # Fallback to sample questions
             return self._get_fallback_questions(genre_name, count, question_type)
     

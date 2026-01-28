@@ -755,13 +755,6 @@
                 `Are you sure you want to delete "${venueName}"?\n\nThis will permanently delete:\n• All registered teams\n• All questions and answers\n• All session data\n\nThis action cannot be undone!`,
                 'Delete',
                 async () => {
-                    // Disable delete button to prevent double-clicks
-                    const deleteBtn = event.target;
-                    const originalText = deleteBtn.textContent;
-                    deleteBtn.disabled = true;
-                    deleteBtn.textContent = 'Deleting...';
-                    deleteBtn.style.opacity = '0.5';
-
                     try {
                         console.log(`📤 [DELETE] Sending DELETE request for session ${sessionId}...`);
                         const response = await fetch(`${BASE_URL}/api/pub-quiz/${sessionId}/delete`, {
