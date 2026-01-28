@@ -1627,11 +1627,13 @@
 
             return new Promise(async (resolve, reject) => {
                 let timeoutId;
+                const controller = new AbortController();
                 
                 try {
-                    // 🔧 FIX: Add 30-second timeout
+                    // 🔧 FIX: Add 30-second timeout with AbortController
                     timeoutId = setTimeout(() => {
                         console.error('[TTS] ⏱️ Timeout after 30 seconds for text:', txt.substring(0, 50));
+                        controller.abort();
                         reject(new Error('TTS timeout'));
                     }, 30000);
                     
@@ -1639,7 +1641,8 @@
                     const response = await fetch(`${BASE_URL}/api/pub-quiz/tts`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: txt, voice_id: voice })
+                        body: JSON.stringify({ text: txt, voice_id: voice }),
+                        signal: controller.signal
                     });
                     console.log('[TTS] 📡 API response status:', response.status);
 
@@ -1669,12 +1672,18 @@
                         console.log('[TTS] 🎵 Audio.play() called successfully');
                     } else {
                         clearTimeout(timeoutId);
-                        console.error('TTS failed:', response.status);
-                        reject(new Error('TTS failed'));
+                        console.error('[TTS] ❌ TTS API failed with status:', response.status);
+                        const errorText = await response.text();
+                        console.error('[TTS] ❌ Error response:', errorText);
+                        reject(new Error(`TTS failed: ${response.status}`));
                     }
                 } catch (e) {
                     clearTimeout(timeoutId);
-                    console.error('TTS failed:', e);
+                    if (e.name === 'AbortError') {
+                        console.error('[TTS] ❌ Fetch aborted due to timeout');
+                    } else {
+                        console.error('[TTS] ❌ TTS failed with error:', e);
+                    }
                     reject(e);
                 }
             });
