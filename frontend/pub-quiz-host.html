@@ -947,6 +947,11 @@
                 btnShowAnswer.disabled = !currentQuestion;
             }
         }
+
+        /**
+         * Connect to Host SSE stream for real-time updates
+         */
+        function connectHostSSE() {
             if (hostEventSource) {
                 hostEventSource.close();
             }
@@ -956,6 +961,7 @@
             hostEventSource.onopen = () => {
                 console.log('✅ Host SSE Connected');
             };
+            
             hostEventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -1001,6 +1007,7 @@
                     console.error('Error parsing Host SSE message:', error);
                 }
             };
+            
             hostEventSource.onerror = (error) => {
                 console.error('❌ Host SSE Connection error:', error);
                 
