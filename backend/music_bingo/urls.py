@@ -90,6 +90,11 @@ def karaoke_host_view(request):
     with open(FRONTEND_DIR / 'karaoke-host.html', 'rb') as f:
         return HttpResponse(f.read(), content_type='text/html')
 
+def bingo_sessions_view(request):
+    from django.http import HttpResponse
+    with open(FRONTEND_DIR / 'bingo-sessions.html', 'rb') as f:
+        return HttpResponse(f.read(), content_type='text/html')
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
@@ -104,6 +109,9 @@ urlpatterns = [
     path("pub-quiz-register.html", pub_quiz_register_view, name="pub-quiz-register"),
     path("pub-quiz-host.html", pub_quiz_host_view, name="pub-quiz-host"),
     path("pub-quiz-sessions.html", pub_quiz_sessions_view, name="pub-quiz-sessions"),
+    
+    # Bingo pages
+    path("bingo-sessions.html", bingo_sessions_view, name="bingo-sessions"),
     
     # Game pages
     path("game.html", game_view, name="game"),
