@@ -967,8 +967,12 @@ def create_jingle_schedule(request):
                 ).order_by('-priority', '-created_at')
                 logger.info(f'Filtering schedules for session: {session_id}, venue: {venue_name}')
             elif venue_name:
-                # Get schedules for specific venue OR schedules without venue (global)
+                # Get schedules for specific venue:
+                # 1. Schedules with sessions from this venue
+                # 2. Schedules without session but with venue_name
+                # 3. Global schedules (no session, no venue)
                 all_schedules = JingleSchedule.objects.filter(
+                    models.Q(session__venue_name=venue_name) |
                     models.Q(session__isnull=True, venue_name=venue_name) |
                     models.Q(session__isnull=True, venue_name__isnull=True) |
                     models.Q(session__isnull=True, venue_name='')
@@ -1237,10 +1241,14 @@ def get_active_jingles(request):
             ).order_by('-priority', '-created_at')
             logger.info(f'Filtering active jingles for session: {session_id}, venue: {venue_name}')
         elif venue_name:
-            # Get schedules for specific venue OR global schedules (no venue/session set)
+            # Get schedules for specific venue:
+            # 1. Schedules with sessions from this venue
+            # 2. Schedules without session but with venue_name
+            # 3. Global schedules (no session, no venue)
             all_schedules = JingleSchedule.objects.filter(
                 enabled=True
             ).filter(
+                django_models.Q(session__venue_name=venue_name) |
                 django_models.Q(session__isnull=True, venue_name=venue_name) |
                 django_models.Q(session__isnull=True, venue_name__isnull=True) |
                 django_models.Q(session__isnull=True, venue_name='')
