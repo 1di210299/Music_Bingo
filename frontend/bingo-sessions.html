@@ -433,9 +433,10 @@
     <script>
         const API_URL = CONFIG.API_URL || '';
 
-        // Load sessions on page load
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadSessions();
+            updateSongEstimation();
         });
 
         async function loadSessions() {
@@ -697,11 +698,6 @@
             document.getElementById('setupEstimation').textContent = 
                 `📊 Estimated: ~${optimalSongs} songs, ${estimatedMinutes} minutes`;
         }
-
-        // Initialize estimation on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            updateSongEstimation();
-        });
 
         function continueSession(sessionId) {
             window.location.href = `/game?session=${sessionId}`;
